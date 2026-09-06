@@ -110,6 +110,24 @@
 
 ## Feitas
 
+### 2026-09-06 — Notinha de cozinha redesenhada (modelo próprio do Eder)
+
+- Layout de linha-por-item trocado por recibo estruturado: cabeçalho
+  com moldura, tabela QTD/ITEM/VL.UNIT/TOT, seções PAGAMENTO/TROCO/
+  OBSERVAÇÃO GERAL, checklist "[ ] Conferido   [ ] Embalado" no rodapé.
+  Ajustado pro papel 80mm (continua funcionando em 58mm também).
+- `/api/v1/print-jobs` agora envia `payment_status` — "(Pago)" na
+  notinha só aparece pra pagamento de verdade confirmado via Mercado
+  Pago.
+- Extração best-effort de "troco para" do texto de `payment_notes`,
+  com fallback pro texto original quando não bate o padrão.
+- print-agent: 30 testes (eram ~13), v1.2.0. Deploy do `.exe` novo +
+  manifest — a Concórdia já está no agente com auto-update, então
+  recebe essa versão sozinha, sem pedir redownload manual.
+- Fora de escopo (decisão consciente): bairro e ponto de referência
+  separados no endereço — hoje é um campo de texto só, não tem dado
+  estruturado pra isso.
+
 ### 2026-09-06 — IA respondeu preço de SÁBADO num domingo (rodízio, Concórdia)
 
 - Reportado ao vivo (Eder, print): "Qual valor do rodízio hj" → IA

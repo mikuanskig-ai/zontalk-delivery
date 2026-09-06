@@ -2,6 +2,35 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.24.0] — 2026-09-06
+
+### Adicionado
+
+- **Notinha de cozinha redesenhada** (a pedido do Eder, modelo próprio
+  fornecido) — trocado o layout de linha-por-item por um recibo
+  estruturado: cabeçalho com moldura, tabela real QTD/ITEM/VL.UNIT/TOT,
+  seções PAGAMENTO/TROCO/OBSERVAÇÃO GERAL rotuladas, e um checklist de
+  conferência no rodapé ("[ ] Conferido   [ ] Embalado"). Ajustado pro
+  papel 80mm (a impressão do print-agent usa `paperColumns` — 48 pra
+  80mm, 32 pra 58mm — os dois continuam funcionando).
+  - Endpoint `/api/v1/print-jobs` agora também envia `payment_status`
+    pro agente, então o "(Pago)" na notinha só aparece pra pagamento
+    de verdade confirmado pelo Mercado Pago — nunca inferido só pelo
+    texto de `payment_method`.
+  - Extração best-effort de "troco para" do texto livre de
+    `payment_notes` — quando não bate com o padrão, mostra o texto
+    original sem tentar adivinhar.
+  - Endereço, cliente, telefone continuam num campo só (não tem dado
+    estruturado de bairro/ponto de referência separados hoje — decisão
+    consciente, não esquecimento).
+  - Repositório separado (`zdelivery-print-agent`, sem remote) — v1.2.0,
+    30 testes (eram ~13). Deploy: novo `.exe` + manifest de versão pro
+    `downloads/` do VPS — como a Concórdia já atualizou pro agente com
+    auto-update (v1.1.0+), essa versão chega sozinha, sem pedir
+    redownload manual de novo.
+  - `payment_status` também exposto no lado do servidor (rota
+    `/api/v1/print-jobs`), 1 teste fortalecido.
+
 ## [0.23.1] — 2026-09-06
 
 ### Corrigido

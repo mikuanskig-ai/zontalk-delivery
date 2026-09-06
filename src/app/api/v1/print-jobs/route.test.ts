@@ -158,7 +158,7 @@ describe('GET /api/v1/print-jobs', () => {
         {
           id: 'order-1', status: 'confirmed', source: 'ai_chat', customer_name: 'Maria',
           delivery_address: 'Rua X, 123', notes: null,
-          payment_method: 'Pix', payment_notes: 'troco para R$100',
+          payment_method: 'Pix', payment_notes: 'troco para R$100', payment_status: 'approved',
           subtotal: 10, delivery_fee: null, total: 10,
           currency: 'BRL', created_at: '2026-01-01T00:00:00Z', contact: null,
         },
@@ -171,6 +171,10 @@ describe('GET /api/v1/print-jobs', () => {
     const body = await res.json();
     expect(body.data.jobs[0].receipt.payment_method).toBe('Pix');
     expect(body.data.jobs[0].receipt.payment_notes).toBe('troco para R$100');
+    // Lets the printed ticket show "(Pago)" only for a real, gateway-
+    // confirmed payment (Mercado Pago) — never inferred from payment_method
+    // alone, which is just whatever free text the customer/AI said.
+    expect(body.data.jobs[0].receipt.payment_status).toBe('approved');
   });
 
   it('prefers the linked contact name over customer_name', async () => {
