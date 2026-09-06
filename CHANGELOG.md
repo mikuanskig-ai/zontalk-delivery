@@ -2,6 +2,29 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.23.1] — 2026-09-06
+
+### Corrigido
+
+- **IA respondeu o valor do rodízio de SÁBADO num domingo** — reportado
+  ao vivo (Eder, print: "Qual valor do rodízio hj" → IA respondeu
+  R$69,90; o certo era R$84,90). O produto está configurado certinho
+  (`day_price_overrides`: sáb=69,90, dom=84,90) e o mecanismo
+  server-side que resolve isso (`day-price.ts`) está correto — o
+  problema foi o modelo, respondendo em texto livre, ecoar um valor de
+  R$69,90 que um ATENDENTE HUMANO tinha citado nesse mesmo WhatsApp
+  semanas atrás (num sábado de verdade, quando estava certo) em vez de
+  chamar `search_menu` de novo pra pegar o preço de hoje.
+  - Corrigido: reforçada a instrução do prompt — preço de dia da semana
+    citado em QUALQUER ponto anterior da conversa (pela própria IA ou
+    por atendente humano) só vale pro dia em que foi dito; toda
+    pergunta sobre valor "hoje"/"hj" exige chamar `search_menu` de novo,
+    nunca reaproveitar um número já visto na conversa.
+  - Ajuste só de prompt (sem gate de código possível aqui — é texto
+    livre, não um total de pedido estruturado que dá pra validar
+    server-side) — reduz a chance de recorrência, não elimina 100%.
+  - 2 testes novos.
+
 ## [0.23.0] — 2026-09-05
 
 ### Corrigido

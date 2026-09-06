@@ -110,6 +110,22 @@
 
 ## Feitas
 
+### 2026-09-06 — IA respondeu preço de SÁBADO num domingo (rodízio, Concórdia)
+
+- Reportado ao vivo (Eder, print): "Qual valor do rodízio hj" → IA
+  respondeu R$69,90 (preço de sábado); hoje era domingo, certo era
+  R$84,90. O produto está configurado certo
+  (`day_price_overrides: {sat:69.90, sun:84.90,...}`) e o
+  `day-price.ts` resolve certo — o modelo que ecoou um valor que um
+  ATENDENTE HUMANO tinha citado nesse mesmo WhatsApp semanas atrás
+  (num sábado real), em vez de chamar `search_menu` de novo.
+- Corrigido: prompt reforçado — preço citado em qualquer ponto anterior
+  da conversa (IA ou humano) só vale pro dia em que foi dito; pergunta
+  sobre "hoje"/"hj" sempre exige `search_menu` de novo.
+- Só ajuste de prompt (texto livre não dá pra validar com gate de
+  código como total de pedido) — reduz recorrência, não elimina 100%.
+- 2 testes novos.
+
 ### 2026-09-05 — IA cancelava sozinha um pedido de dias/semanas atrás sem o cliente pedir (Davi Santos, Concórdia)
 
 - Reportado ao vivo (Eder, 2 notinhas: uma "CANCELADO" de um pedido de

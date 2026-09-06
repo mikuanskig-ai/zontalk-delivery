@@ -59,3 +59,21 @@ describe('buildSystemPrompt — daily menu', () => {
     expect(prompt).not.toContain("today's menu")
   })
 })
+
+describe('buildSystemPrompt — stale price warning (toolsActive)', () => {
+  // Confirmed live (2026-09-06, Concórdia): the model answered "qual valor
+  // do rodízio hj" with R$69,90 (Saturday's day_price_override) on a
+  // Sunday (correct answer: R$84,90) — echoing a price a HUMAN AGENT had
+  // quoted correctly weeks earlier, on an actual Saturday, still visible
+  // in this same long-lived WhatsApp thread. A real number, just stale.
+  it('warns against reusing an old price from earlier in the conversation when tools are active', () => {
+    const prompt = buildSystemPrompt({ userPrompt: null, mode: 'draft', toolsActive: true })
+    expect(prompt).toMatch(/price.*change.*day of the week/i)
+    expect(prompt).toMatch(/never reuse an old price/i)
+  })
+
+  it('omits the warning entirely when tools are not active — nothing to call search_menu with', () => {
+    const prompt = buildSystemPrompt({ userPrompt: null, mode: 'draft', toolsActive: false })
+    expect(prompt).not.toMatch(/never reuse an old price/i)
+  })
+})

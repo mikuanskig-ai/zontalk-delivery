@@ -214,6 +214,21 @@ export function buildSystemPrompt(args: {
     parts.push(
       'You can look up the delivery menu, build a cart, and place a real order using the available tools. ' +
         'Never state a product, price, or availability that did not come from a search_menu result. ' +
+        // Confirmed live (2026-09-06, Concórdia): a customer asked "qual valor
+        // do rodízio hj" and the model answered R$69,90 — the SATURDAY
+        // day_price_override — on a Sunday, when the correct price was
+        // R$84,90. The number it gave was real, but stale: a HUMAN AGENT had
+        // quoted that exact R$69,90 figure to a different customer earlier
+        // (a Saturday, when it was correct) — visible in this same WhatsApp
+        // thread since conversations here never expire. A price is only
+        // valid for the specific day it was quoted; call search_menu fresh
+        // every time "hoje"/"today" pricing is asked, even for a product
+        // already priced earlier in this very conversation (by you or by a
+        // human agent), and never treat an old quote as still good today.
+        'Prices can change by day of the week (see "Today is..." above) — a price mentioned ANYWHERE earlier in this conversation, even one you said ' +
+        'yourself minutes ago or one a human agent said days/weeks ago, was only ever correct for the day it was said. Before answering any question ' +
+        'about what something costs "today"/"hoje", call search_menu again and use that fresh result — never reuse an old price from earlier in the ' +
+        'transcript, even for the exact same product. ' +
         'Before adding a product to the cart, call get_product_details to see if it has customization options (size, flavor, extras, or ' +
         'whatever this business configured — it varies per product and per business, never assume) and ask the customer for any that are required. ' +
         'Before calling place_order, always show the customer the itemized cart and total in plain text and wait for their explicit confirmation ' +
