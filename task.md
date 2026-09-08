@@ -110,6 +110,35 @@
 
 ## Feitas
 
+### 2026-09-08 — print-agent: bug do auto-update sumindo com o .exe + largura de papel personalizada (Concórdia)
+
+- Relato do Eder: agente da Concórdia "dá erro e para de funcionar"
+  logo após uma auto-atualização. Causa encontrada no
+  `buildUpdateScript` (updater.ts): o script renomeava o `.exe` atual
+  pra `.previous` e só depois tentava mover o arquivo baixado pro
+  lugar, sem checar se esse segundo `move` deu certo — se falhasse
+  (suspeita: antivírus travando por um instante o arquivo recém-
+  baixado), o `.exe` deixava de existir no caminho esperado e o
+  `start` seguinte não iniciava nada. Corrigido: troca agora tenta até
+  5x (2s de intervalo) e, se mesmo assim falhar, restaura o backup no
+  lugar do `.exe` (caminho nunca fica vazio) e registra a falha em
+  `agent.log`.
+- Largura de papel: Concórdia usa rolo de 35mm, fora dos dois presets
+  do assistente `--setup` (58mm/32 col, 80mm/48 col — o `config.json`
+  já aceitava qualquer valor, só o assistente interativo travava nos
+  dois). Novo item "3) Outra largura" deixa digitar o número de
+  colunas direto.
+- print-agent v1.3.1, deploy (novo `.exe` + manifest) — chega sozinho
+  via auto-update assim que o agente da Concórdia voltar a rodar
+  (v1.1.0+ já tem self-update).
+- **Pendente**: não tenho acesso remoto à máquina da Concórdia agora.
+  Falta confirmar com o Eder o texto exato do erro (screenshot/
+  `agent.log`) e, quando houver acesso, checar se o `.exe` ficou
+  faltando no caminho (efeito do bug acima) e se precisa reinstalar
+  manualmente ali antes do auto-update conseguir se aplicar de novo.
+  Também falta configurar as 35mm de fato nesse PC (rodar `--setup`
+  de novo, opção 3, ou editar `paperColumns` direto no `config.json`).
+
 ### 2026-09-07 — Simulador de impressão + impressão compacta
 
 - Simulador (Configurações → Delivery → Impressão): monta pedido de

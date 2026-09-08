@@ -2,6 +2,32 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.25.1] — 2026-09-08
+
+### Corrigido
+
+- **print-agent v1.3.1** (repositório separado, sem remote) — relato do
+  Eder: agente da Concórdia "dá erro e para de funcionar" logo após uma
+  auto-atualização. Causa: o script gerado pelo auto-update
+  (`buildUpdateScript`) renomeava o `.exe` atual pra `.previous` e só
+  depois tentava mover o arquivo baixado pro lugar, sem checar se esse
+  segundo `move` deu certo — se falhasse (ex.: antivírus travando por
+  um instante o arquivo recém-baixado), o `.exe` simplesmente deixava
+  de existir no caminho esperado, e o `start` seguinte não iniciava
+  nada. Agora a troca tenta até 5x (2s de intervalo) e, se mesmo assim
+  falhar, restaura o backup no lugar do `.exe` — o caminho nunca fica
+  vazio — e registra a falha em `agent.log`. 1 teste novo
+  (`updater.test.ts`).
+- **Largura de papel personalizada no `--setup`** — pedido do Eder:
+  Concórdia usa um rolo de 35mm, fora dos dois presets (58mm/32
+  colunas, 80mm/48 colunas). Novo item "3) Outra largura" no assistente
+  deixa digitar o número de colunas direto — o campo já aceitava
+  qualquer valor no `config.json` (`paperColumns`), só o assistente
+  interativo travava em 32/48.
+- Deploy: novo `.exe` + manifest pro `downloads/` do VPS — chega
+  sozinho pra quem já está no agente com auto-update (v1.1.0+, inclui
+  a própria Concórdia assim que o agente dela voltar a rodar).
+
 ## [0.25.0] — 2026-09-07
 
 ### Adicionado
