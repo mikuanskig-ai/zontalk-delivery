@@ -2,6 +2,39 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.25.0] — 2026-09-07
+
+### Adicionado
+
+- **Simulador de impressão** (Configurações → Delivery → Impressão) —
+  pedido do Eder: montar um pedido de teste e mandar pra impressora de
+  verdade da loja sem precisar criar um pedido real primeiro. Novo
+  endpoint `POST /api/delivery/print-test` reaproveita 100% o pipeline
+  real (`delivery_orders` + `delivery_order_items` + `print_jobs`
+  reais) mas pula todo efeito colateral de venda de verdade — nunca
+  abre cobrança Mercado Pago, nunca marca/dispara automação num
+  contato, nunca dispara o webhook `order.created` nem automação de
+  "pedido criado" (`finalizeDeliveryOrder` ganhou `skipSideEffects`).
+  Pedido de teste fica visível em Pedidos com nome prefixado 🧪, pra
+  nunca ser confundido com venda real. UI mostra "aguardando →
+  impresso/falhou" fazendo polling do mesmo `print_jobs` que o pedido
+  real já usa — sem tabela nova.
+- **Impressão compacta** (mesma tela) — pedido do Eder: o redesenho da
+  notinha (0.24.0) tem mais seções que o formato antigo, e com o texto
+  em altura dupla ligado no ticket inteiro, isso deixou a notinha
+  física mais comprida. Novo toggle por conta
+  (`print_configs.compact_print`, migration 078) desliga a altura
+  dupla — ticket mais curto, gasta menos papel.
+  - `/api/v1/print-jobs` agora também envia `compact_print` pro
+    agente; corrigido de brinde um bug real no endpoint de config
+    (`/api/delivery/print-config`): o toggle de "ativar impressão" e o
+    de "compacto" são dois controles independentes que postam pro
+    mesmo endpoint — antes, ligar um resetava o outro pro padrão sem
+    querer.
+  - print-agent v1.3.0: `renderReceipt` ganha o parâmetro `compact`
+    (default false — comportamento atual preservado).
+  - 8 testes novos no zdelivery, 2 no print-agent.
+
 ## [0.24.0] — 2026-09-06
 
 ### Adicionado

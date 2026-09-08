@@ -74,6 +74,17 @@ export async function GET(request: Request) {
       .eq('id', ctx.accountId)
       .maybeSingle();
 
+    // Compact-print preference (migration 078) — tells the agent
+    // whether to skip the double-height text on the ticket body. No
+    // row at all defaults to false (double-height, today's existing
+    // behavior) — same "no row = feature off" convention print_configs
+    // already uses for `enabled`.
+    const { data: printConfig } = await ctx.supabase
+      .from('print_configs')
+      .select('compact_print')
+      .eq('account_id', ctx.accountId)
+      .maybeSingle();
+
     // Atomic claim (see header comment) — never a plain SELECT of
     // 'pending' jobs, which a concurrent second poller could also see
     // and print before either got to ack.
@@ -196,6 +207,7 @@ export async function GET(request: Request) {
 
     return ok({
       account_name: account?.name ?? null,
+      compact_print: printConfig?.compact_print === true,
       pending_count: pendingCount ?? 0,
       jobs: servedJobs,
     });

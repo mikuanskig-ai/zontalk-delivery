@@ -69,12 +69,17 @@ function makeDb(seed: {
   print_jobs?: Record<string, unknown>[];
   delivery_orders?: Record<string, unknown>[];
   delivery_order_items?: Record<string, unknown>[];
+  /** print_configs.compact_print (migration 078) — empty by default,
+   *  same "no row = false" convention as every other test here that
+   *  doesn't care about it. */
+  print_configs?: Record<string, unknown>[];
 }) {
   const tables: Record<string, Record<string, unknown>[]> = {
     accounts: seed.accounts ?? [],
     print_jobs: seed.print_jobs ?? [],
     delivery_orders: seed.delivery_orders ?? [],
     delivery_order_items: seed.delivery_order_items ?? [],
+    print_configs: seed.print_configs ?? [],
   };
   return {
     from: (table: string) => {
@@ -138,6 +143,9 @@ describe('GET /api/v1/print-jobs', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data.account_name).toBe('Pizzaria');
+    // No print_configs row seeded — defaults to false, same "no row =
+    // feature off" convention as everything else in that table.
+    expect(body.data.compact_print).toBe(false);
     // pending_count reflects the backlog AFTER this call's own claim
     // (the job served in `jobs` below was just flipped to 'claimed',
     // so it no longer counts as still-pending) — 0 here, not 1.
@@ -146,6 +154,18 @@ describe('GET /api/v1/print-jobs', () => {
     expect(body.data.jobs[0].receipt.customer_name).toBe('Maria');
     expect(body.data.jobs[0].receipt.items).toHaveLength(1);
     expect(mocks.touchPrintAgentPoll).toHaveBeenCalledWith('acct-1');
+  });
+
+  it('returns compact_print: true when the account opted into compact printing', async () => {
+    const db = makeDb({
+      accounts: [{ id: 'acct-1', name: 'Pizzaria' }],
+      print_configs: [{ account_id: 'acct-1', compact_print: true }],
+    });
+    mocks.requireApiKey.mockResolvedValue({ supabase: db, accountId: 'acct-1' });
+
+    const res = await GET(request());
+    const body = await res.json();
+    expect(body.data.compact_print).toBe(true);
   });
 
   it('includes payment_method/payment_notes in the receipt when the order has them', async () => {

@@ -15,7 +15,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('print_configs')
-      .select('enabled, last_polled_at')
+      .select('enabled, last_polled_at, compact_print')
       .eq('account_id', accountId)
       .maybeSingle()
 
@@ -47,32 +47,53 @@ export async function POST(request: Request) {
     if (!body || typeof body !== 'object') {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
-    const enabled = body.enabled === true
+    // `enabled` and `compact_print` are two independent toggles in the
+    // UI (auto-print on/off; compact ticket layout on/off), each POSTing
+    // here on its own — only patch a field when the caller actually sent
+    // it, or flipping one toggle would silently reset the other back to
+    // whatever `=== true` defaults an absent field to (false).
+    const hasEnabledField = 'enabled' in body
+    const hasCompactField = 'compact_print' in body
+    if (!hasEnabledField && !hasCompactField) {
+      return NextResponse.json({ error: 'Nothing to update — pass enabled or compact_print' }, { status: 400 })
+    }
+    const patch: Record<string, unknown> = {}
+    if (hasEnabledField) patch.enabled = body.enabled === true
+    if (hasCompactField) patch.compact_print = body.compact_print === true
 
     const { data: existing } = await supabase
       .from('print_configs')
-      .select('id')
+      .select('id, enabled, compact_print')
       .eq('account_id', accountId)
       .maybeSingle()
 
     if (existing) {
       const { error } = await supabase
         .from('print_configs')
-        .update({ enabled })
+        .update(patch)
         .eq('account_id', accountId)
       if (error) {
         console.error('[delivery/print-config POST] update error:', error)
         return NextResponse.json({ error: 'Failed to save print config' }, { status: 500 })
       }
     } else {
-      const { error } = await supabase.from('print_configs').insert({ account_id: accountId, enabled })
+      // Row doesn't exist yet — fall back to the schema defaults
+      // (enabled: false, compact_print: false) for whichever field
+      // this particular call didn't send.
+      const { error } = await supabase
+        .from('print_configs')
+        .insert({ account_id: accountId, enabled: false, compact_print: false, ...patch })
       if (error) {
         console.error('[delivery/print-config POST] insert error:', error)
         return NextResponse.json({ error: 'Failed to save print config' }, { status: 500 })
       }
     }
 
-    return NextResponse.json({ success: true, enabled })
+    return NextResponse.json({
+      success: true,
+      enabled: hasEnabledField ? patch.enabled : (existing?.enabled ?? false),
+      compact_print: hasCompactField ? patch.compact_print : (existing?.compact_print ?? false),
+    })
   } catch (err) {
     return toErrorResponse(err)
   }

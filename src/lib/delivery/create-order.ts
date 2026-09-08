@@ -128,6 +128,15 @@ export interface FinalizeDeliveryOrderArgs {
   currency: string;
   paymentMethod?: string | null;
   paymentNotes?: string | null;
+  /** True only for the print simulator (Configurações → Impressão →
+   *  "Testar impressão"). Still creates the real order + item rows and
+   *  the real print job — the whole point is exercising the real
+   *  agent/printer pipeline end to end — but skips every side effect a
+   *  genuine sale triggers below (Mercado Pago preference, contact
+   *  auto-tag, `order.created` webhook, `order_created` automations). A
+   *  test print must never open a real payment link, tag a real
+   *  contact, or fire an integration/automation with made-up data. */
+  skipSideEffects?: boolean;
 }
 
 /**
@@ -188,7 +197,13 @@ export async function finalizeDeliveryOrder(
     return {
       account_id: args.accountId,
       order_id: order.id,
-      product_id: item.product_id,
+      // `|| null`, not the raw string: the print-simulator's synthetic
+      // items (create-order.ts callers with skipSideEffects) pass an
+      // empty product_id since there's no real delivery_products row
+      // behind a made-up test line — product_id's FK is nullable
+      // (ON DELETE SET NULL) but does NOT accept an arbitrary
+      // non-matching string, only null or a real id.
+      product_id: item.product_id || null,
       product_name: item.product_name,
       unit_price: item.unit_price,
       quantity: item.quantity,
@@ -203,6 +218,16 @@ export async function finalizeDeliveryOrder(
     if (itemsErr) {
       throw new Error(`Failed to create delivery order items: ${itemsErr.message}`);
     }
+  }
+
+  // Print simulator: stop right here, after the order + items exist —
+  // enqueue the real print job (that's the whole point) and skip every
+  // side effect below meant for a genuine sale. See skipSideEffects'
+  // doc on FinalizeDeliveryOrderArgs for why each one is unsafe to fire
+  // for made-up test data.
+  if (args.skipSideEffects) {
+    await enqueuePrintJob(args.accountId, order.id);
+    return order;
   }
 
   // Fase 4 (Checkout): open a Mercado Pago preference when the account

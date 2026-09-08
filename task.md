@@ -110,6 +110,23 @@
 
 ## Feitas
 
+### 2026-09-07 — Simulador de impressão + impressão compacta
+
+- Simulador (Configurações → Delivery → Impressão): monta pedido de
+  teste e manda pra impressora real da loja, sem precisar de pedido
+  real. `POST /api/delivery/print-test` reaproveita o pipeline real
+  (`finalizeDeliveryOrder` com `skipSideEffects: true`) — nunca abre
+  Mercado Pago, nunca marca contato, nunca dispara webhook/automação.
+  Pedido de teste fica visível em Pedidos com nome 🧪, sem tabela nova
+  (usa o mesmo `print_jobs` pra status).
+- Impressão compacta: toggle por conta (`compact_print`, migration
+  078) desliga a altura dupla do texto — ticket mais curto. Corrigido
+  de brinde um bug real: os dois toggles de impressão (ativar/
+  compacto) resetavam um ao outro por postarem no mesmo endpoint sem
+  tratar campo ausente vs. falso.
+- print-agent v1.3.0 (renderReceipt ganha parâmetro compact).
+- 8 testes novos no zdelivery, 2 no print-agent.
+
 ### 2026-09-06 — Notinha de cozinha redesenhada (modelo próprio do Eder)
 
 - Layout de linha-por-item trocado por recibo estruturado: cabeçalho

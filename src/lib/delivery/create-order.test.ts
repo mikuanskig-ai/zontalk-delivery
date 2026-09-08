@@ -32,6 +32,8 @@ import { getPaymentConfigSecrets } from "@/lib/payments/config";
 import { createPreference } from "@/lib/payments/mercadopago-api";
 import { sendMessageToConversation } from "@/lib/whatsapp/send-message";
 import { addContactTagAndDispatch } from "@/lib/contacts/tag-events";
+import { dispatchWebhookEvent } from "@/lib/webhooks/deliver";
+import { runAutomationsForTrigger } from "@/lib/automations/engine";
 
 function line(overrides: Partial<CartLineItem> = {}): CartLineItem {
   return {
@@ -463,5 +465,93 @@ describe("finalizeDeliveryOrder — order-placed tag (2026-09-01)", () => {
     });
 
     expect(order.id).toBe("order-1");
+  });
+});
+
+describe("finalizeDeliveryOrder — skipSideEffects (print simulator, 2026-09-07)", () => {
+  beforeEach(() => {
+    vi.mocked(getPaymentConfigSecrets).mockReset();
+    vi.mocked(createPreference).mockReset();
+    vi.mocked(addContactTagAndDispatch).mockClear();
+    vi.mocked(dispatchWebhookEvent).mockClear();
+    vi.mocked(runAutomationsForTrigger).mockClear();
+  });
+
+  it("creates the order and items but skips every sale side effect when skipSideEffects is true", async () => {
+    // Deliberately configured so every side effect WOULD fire if
+    // skipSideEffects didn't short-circuit first — proves the skip is
+    // real, not just "nothing was configured to fire anyway".
+    vi.mocked(getPaymentConfigSecrets).mockResolvedValue({
+      enabled: true,
+      mpAccessToken: "token",
+      mpWebhookSecret: "secret",
+    });
+    const { db, insertCalls } = makeOrdersDb({
+      baseOrder: { ...BASE_ORDER, contact_id: "contact-1", conversation_id: "conv-1" },
+      orderPlacedTagId: "tag-1",
+    });
+
+    const order = await finalizeDeliveryOrder(db, {
+      accountId: "acct-1",
+      contactId: null,
+      conversationId: null,
+      source: "manual",
+      cart: [{ product_id: "", product_name: "Item de teste", unit_price: 0, quantity: 1, addons: [] }],
+      currency: "BRL",
+      customerName: "🧪 Simulador de Impressão",
+      skipSideEffects: true,
+    });
+
+    expect(order.id).toBe("order-1");
+    expect(insertCalls[0]).toEqual(expect.objectContaining({ customer_name: "🧪 Simulador de Impressão" }));
+    expect(createPreference).not.toHaveBeenCalled();
+    expect(addContactTagAndDispatch).not.toHaveBeenCalled();
+    expect(dispatchWebhookEvent).not.toHaveBeenCalled();
+    expect(runAutomationsForTrigger).not.toHaveBeenCalled();
+  });
+
+  it("stores a synthetic item's empty product_id as null, not an empty string (FK is nullable, not string-tolerant)", async () => {
+    const { db } = makeOrdersDb({ baseOrder: BASE_ORDER });
+    const itemsInsert = vi.fn(() => Promise.resolve({ error: null }));
+    const originalFrom = (db as unknown as { from: (t: string) => unknown }).from.bind(db);
+    (db as unknown as { from: (t: string) => unknown }).from = (table: string) => {
+      if (table === "delivery_order_items") return { insert: itemsInsert };
+      return originalFrom(table);
+    };
+
+    await finalizeDeliveryOrder(db, {
+      accountId: "acct-1",
+      contactId: null,
+      conversationId: null,
+      source: "manual",
+      cart: [{ product_id: "", product_name: "Item de teste", unit_price: 0, quantity: 1, addons: [] }],
+      currency: "BRL",
+      skipSideEffects: true,
+    });
+
+    expect(itemsInsert).toHaveBeenCalledWith([
+      expect.objectContaining({ product_id: null, product_name: "Item de teste" }),
+    ]);
+  });
+
+  it("still creates the order normally (all side effects fire) when skipSideEffects is omitted", async () => {
+    vi.mocked(getPaymentConfigSecrets).mockResolvedValue(null);
+    const { db } = makeOrdersDb({
+      baseOrder: { ...BASE_ORDER, contact_id: "contact-1", conversation_id: "conv-1" },
+      orderPlacedTagId: "tag-1",
+    });
+
+    await finalizeDeliveryOrder(db, {
+      accountId: "acct-1",
+      contactId: "contact-1",
+      conversationId: "conv-1",
+      source: "manual",
+      cart: CART,
+      currency: "BRL",
+    });
+
+    expect(addContactTagAndDispatch).toHaveBeenCalledTimes(1);
+    expect(dispatchWebhookEvent).toHaveBeenCalledTimes(1);
+    expect(runAutomationsForTrigger).toHaveBeenCalledTimes(1);
   });
 });

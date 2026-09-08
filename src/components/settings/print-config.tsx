@@ -16,6 +16,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { SettingsPanelHead } from './settings-panel-head';
+import { PrintTestSimulator } from './print-test-simulator';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +43,8 @@ export function PrintConfig() {
   const [saving, setSaving] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [lastPolledAt, setLastPolledAt] = useState<string | null>(null);
+  const [compactPrint, setCompactPrint] = useState(false);
+  const [savingCompact, setSavingCompact] = useState(false);
 
   const loadedAccountIdRef = useRef<string | null>(null);
 
@@ -56,6 +59,7 @@ export function PrintConfig() {
       if (data.configured) {
         setEnabled(Boolean(data.enabled));
         setLastPolledAt(data.last_polled_at ?? null);
+        setCompactPrint(Boolean(data.compact_print));
       }
     } catch {
       toast.error(t('loadFailed'));
@@ -108,6 +112,30 @@ export function PrintConfig() {
       toast.error(t('saveFailed'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleCompact = async (next: boolean) => {
+    setCompactPrint(next);
+    setSavingCompact(true);
+    try {
+      const res = await fetch('/api/delivery/print-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ compact_print: next }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(t('saveSuccess'));
+      } else {
+        setCompactPrint(!next);
+        toast.error(data.error ?? t('saveFailed'));
+      }
+    } catch {
+      setCompactPrint(!next);
+      toast.error(t('saveFailed'));
+    } finally {
+      setSavingCompact(false);
     }
   };
 
@@ -226,6 +254,25 @@ export function PrintConfig() {
             </ol>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('compactTitle')}</CardTitle>
+            <CardDescription>{t('compactDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
+              <p className="text-sm font-medium text-foreground">{t('compactLabel')}</p>
+              <Switch
+                checked={compactPrint}
+                onCheckedChange={handleToggleCompact}
+                disabled={!canEdit || savingCompact}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <PrintTestSimulator />
       </div>
     </div>
   );
