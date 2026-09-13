@@ -13,6 +13,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { DEFAULT_CURRENCY } from "@/lib/currency";
+import { findActiveImpersonationClient } from "@/lib/auth/impersonation-client";
 import {
   canEditSettings as canEditSettingsFor,
   canManageMembers as canManageMembersFor,
@@ -197,26 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let effectiveAccountRole = data.account_role;
         let impersonatingNow = false;
         if (data.is_platform_admin) {
-          try {
-            const { data: grant } = await supabase
-              .from("admin_impersonation_sessions")
-              .select("target_account_id, target_role")
-              .eq("admin_user_id", userId)
-              .is("ended_at", null)
-              .gt("expires_at", new Date().toISOString())
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            if (grant) {
-              effectiveAccountId = grant.target_account_id as string;
-              effectiveAccountRole = grant.target_role as string;
-              impersonatingNow = true;
-            }
-          } catch (err) {
-            // Best-effort, same as the server-side resolver — a broken
-            // lookup must never block the admin's own profile from
-            // loading.
-            console.error("[AuthProvider] impersonation grant check threw:", err);
+          const grant = await findActiveImpersonationClient(supabase, userId);
+          if (grant) {
+            effectiveAccountId = grant.accountId;
+            effectiveAccountRole = grant.role;
+            impersonatingNow = true;
           }
         }
         setImpersonating(impersonatingNow);

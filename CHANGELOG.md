@@ -2,6 +2,28 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.26.1] — 2026-09-13
+
+### Corrigido
+
+- **Status do WhatsApp inconsistente durante "Acessar empresa"** —
+  relato do Eder logo no primeiro teste da simulação (Concórdia):
+  Configurações dizia "conectado", a Caixa de entrada dizia
+  "desconectado". Causa: `inbox/page.tsx` resolvia a conta atual com
+  uma consulta direta a `profiles` por `user_id` em vez de usar
+  `useAuth()` — durante a simulação isso resolvia pra conta do PRÓPRIO
+  admin (nunca conectada ao WhatsApp), não pra da Concórdia. Corrigido
+  para usar o `accountId` de `useAuth()`, que já é ciente da simulação
+  desde a 0.26.0.
+  - Mesmo bug encontrado de brinde e corrigido em `upload-media.ts`
+    (upload de mídia usado pelo composer da caixa de entrada e pelo
+    construtor de Fluxos) — um anexo enviado durante a simulação iria
+    parar na pasta da conta errada no Storage.
+  - Extraído `findActiveImpersonationClient` (novo módulo
+    `lib/auth/impersonation-client.ts`) pra não duplicar essa consulta
+    em cada lugar que precisar dela no cliente.
+  - 4 testes novos.
+
 ## [0.26.0] — 2026-09-13
 
 ### Adicionado

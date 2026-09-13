@@ -4,6 +4,7 @@ import { Suspense, useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import {
   CONVERSATION_SELECT,
   normalizeConversation,
@@ -36,6 +37,7 @@ function InboxPageInner() {
   const t = useTranslations("Inbox.page");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { accountId } = useAuth();
   /**
    * `?c=<id>` deep-link support. Used when landing here from the
    * dashboard's recent-conversations list so the right thread opens
@@ -172,34 +174,21 @@ function InboxPageInner() {
     }
   }, []);
 
-  // Check WhatsApp connection status on mount
+  // Check WhatsApp connection status on mount. `accountId` comes from
+  // useAuth() rather than a direct `profiles` lookup here — it's
+  // already the impersonation-aware value (migration 080): a platform
+  // admin viewing this page via "Acessar empresa" needs the TARGET
+  // account's connection status, not their own. A direct
+  // `.eq("user_id", user.id)` profiles query (the previous shape of
+  // this effect) would have resolved to the admin's own account
+  // instead and shown "not connected" regardless of the real tenant's
+  // status — confirmed live (Concórdia, 2026-09-13): Configurações
+  // showed "conectado" while this banner said the opposite, while
+  // impersonating.
   useEffect(() => {
+    if (!accountId) return;
     const checkConnection = async () => {
       const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const user = session?.user;
-
-      if (!user) return;
-
-      // whatsapp_config is one-row-per-account post-multi-user, so
-      // the previous `.eq('user_id', user.id)` would miss the row
-      // for any teammate who didn't personally save the config —
-      // the "WhatsApp not connected" banner would show in the
-      // shared inbox even though the admin had it configured.
-      // Resolve account_id via the profile and query by that.
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("account_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const accountId = profile?.account_id as string | undefined;
-      if (!accountId) {
-        setWhatsappConnected(false);
-        return;
-      }
-
       const { data } = await supabase
         .from("whatsapp_config")
         .select("status")
@@ -210,7 +199,7 @@ function InboxPageInner() {
     };
 
     checkConnection();
-  }, []);
+  }, [accountId]);
 
   // Handle realtime message events
   const handleMessageEvent = useCallback(

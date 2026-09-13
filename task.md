@@ -110,6 +110,19 @@
 
 ## Feitas
 
+### 2026-09-13 — Status do WhatsApp inconsistente durante "Acessar empresa" (Concórdia)
+
+- Achado pelo Eder no primeiro teste real da simulação: Configurações
+  dizia "conectado", Caixa de entrada dizia "desconectado".
+- Causa: `inbox/page.tsx` resolvia a conta atual com consulta direta a
+  `profiles` por `user_id`, ignorando a simulação — resolvia pra conta
+  do próprio admin (nunca conectada), não pra da Concórdia. Trocado
+  pelo `accountId` de `useAuth()`, que já é ciente da simulação.
+- Mesmo bug de brinde em `upload-media.ts` (mídia da caixa de entrada e
+  do construtor de Fluxos) — corrigido junto, extraindo
+  `findActiveImpersonationClient` num módulo compartilhado.
+- 4 testes novos. Deploy feito.
+
 ### 2026-09-13 — "Acessar empresa" no admin (impersonation)
 
 - Pedido do Eder (com print de referência): na aba Empresas do admin,
@@ -126,15 +139,10 @@
   amarela fixa avisa "vendo como X" com botão de sair.
 - Aplicada em produção. 17 testes novos, 1116/1116 no total,
   typecheck/lint/build limpos.
-- **Pendente**: não consegui validar o fluxo de ponta a ponta de
-  verdade (clicar no botão, ver o painel da empresa, sair) — não tenho
-  acesso a navegador neste ambiente, e escrever/apagar uma linha de
-  teste direto na tabela de produção foi bloqueado pelo classificador
-  de permissões (mexe em recurso compartilhado). A lógica está coberta
-  por teste automatizado espelhando exatamente as mesmas regras de
-  rank da migration 017, mas vale o Eder clicar em "Acessar empresa"
-  numa conta de teste e confirmar que abre certo e que "Sair da
-  simulação" volta pro admin.
+- **Confirmado pelo Eder em teste real (Concórdia)**: botão funciona,
+  faixa amarela aparece certo, painel mostra os dados da empresa. Achou
+  de cara uma inconsistência (status do WhatsApp) — ver entrada
+  "Status do WhatsApp inconsistente" logo abaixo, já corrigida.
 
 ### 2026-09-13 — IA "alucinando" preço do rodízio de domingo (busca da base de conhecimento retornava vazio) — Concórdia
 
