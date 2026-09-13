@@ -110,6 +110,30 @@
 
 ## Feitas
 
+### 2026-09-13 — IA "alucinando" preço do rodízio de domingo (busca da base de conhecimento retornava vazio) — Concórdia
+
+- Print do Eder: cliente perguntou "quanto é por pessoa pro almoço no
+  domingo", IA respondeu R$70/R$35 e inventou "massas de macarrão
+  inclusas" — real é R$84,90/R$42,45 com caipirinha+refrigerante à
+  vontade (já estava certo, indexado, na base de conhecimento).
+- Não era o modelo inventando por conta própria: reproduzi a pergunta
+  exata contra a produção e a busca lexical (`match_ai_knowledge_fts`)
+  retornava zero resultados — o trecho certo nunca chegava no contexto
+  da IA. Dois bugs na função (migration 030): exigia todas as palavras
+  da pergunta no mesmo trecho (E, não OU); e o índice em modo
+  `'simple'` (sem stemming) fazia "domingo" nunca casar com "Domingos"
+  (plural, como está no documento).
+- Migration 079 (aplicada em produção): índice passa a somar
+  `'simple'` + `'portuguese'` (aditivo, não regride outros idiomas) e
+  busca virou OU em vez de E. Nenhuma mudança de código de app.
+  Confirmado depois: a mesma pergunta exata já retorna o trecho certo.
+- **Pendente**: não é garantia de que a IA vai sempre citar o valor
+  certo daqui pra frente sozinha — o trecho certo agora *chega* no
+  contexto, mas o prompt não foi revisado pra reforçar "priorize o
+  preço do RODÍZIO, não da MARMITA/QUILO, quando perguntarem de
+  almoço". Vale confirmar com o Eder numa próxima pergunta real se o
+  valor sai certo agora.
+
 ### 2026-09-08 — print-agent: bug do auto-update sumindo com o .exe + largura de papel personalizada (Concórdia)
 
 - Relato do Eder: agente da Concórdia "dá erro e para de funcionar"

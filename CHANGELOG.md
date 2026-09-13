@@ -2,6 +2,31 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.25.2] — 2026-09-13
+
+### Corrigido
+
+- **IA "alucinando" preço do rodízio de domingo** (Concórdia, relato do
+  Eder — cliente perguntou "quanto é por pessoa pro almoço no
+  domingo", IA respondeu R$70/R$35 com "massas de macarrão inclusas",
+  quando o real é R$84,90/R$42,45 com caipirinha+refrigerante à
+  vontade). A base de conhecimento já tinha a resposta certa indexada
+  — o problema era a busca (RAG), não o modelo inventando por conta
+  própria: reproduzida a pergunta exata contra a produção, a busca
+  lexical (`match_ai_knowledge_fts`) retornava **zero resultados**.
+  Dois bugs na função (migration 030): (1) exigia todas as palavras da
+  pergunta no mesmo trecho (E, não OU) — uma frase natural de cliente
+  quase nunca bate 100% com um trecho curto; (2) índice em modo
+  `'simple'` (sem stemming, escolhido de propósito pra funcionar em
+  qualquer idioma) fazia "domingo" (singular, o que o cliente digitou)
+  nunca casar com "Domingos" (plural, como está escrito no documento).
+  Migration 079: índice passa a somar `'simple'` + `'portuguese'`
+  (aditivo — não regride outros idiomas) e a busca virou OU em vez de
+  E. Sem mudança de código de aplicação — só a migration no banco,
+  aplicada direto em produção. Confirmado depois: a mesma pergunta
+  exata agora retorna o trecho certo (R$84,90) entre os 5 primeiros
+  resultados.
+
 ## [0.25.1] — 2026-09-08
 
 ### Corrigido
