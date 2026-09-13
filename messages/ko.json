@@ -81,7 +81,10 @@
       "tabDashboard": "대시보드",
       "tabAccounts": "회사",
       "tabFinance": "재무",
-      "tabPlans": "요금제"
+      "tabPlans": "요금제",
+      "accessCompany": "회사 접속",
+      "accessCompanyStarting": "입장 중...",
+      "accessCompanyFailed": "회사 접속에 실패했습니다."
     },
     "finance": {
       "filterFrom": "시작일",
@@ -2914,5 +2917,10 @@
     "welcomeToTeam": "팀에 오신 것을 환영합니다",
     "couldNotReachServer": "서버에 연결할 수 없습니다",
     "couldNotSignOut": "로그아웃할 수 없습니다. 페이지를 새로고침해 보세요."
+  },
+  "ImpersonationBanner": {
+    "viewingAs": "다음 계정으로 대시보드를 보는 중입니다",
+    "exit": "접속 종료",
+    "exiting": "종료 중..."
   }
 }

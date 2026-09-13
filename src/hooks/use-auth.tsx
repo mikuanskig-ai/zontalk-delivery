@@ -116,6 +116,16 @@ interface AuthContextValue {
   isPlatformAdmin: boolean;
   /** True if the current account is suspended (migration 062). */
   isSuspended: boolean;
+  /** True while viewing the app as a target account via "Acessar
+   *  Empresa" (migration 080) — `accountId`/`account`/`accountRole`
+   *  above are already the TARGET's, this just tells chrome (the
+   *  impersonation banner) to render. */
+  isImpersonating: boolean;
+  /** Ends the current impersonation grant and reloads the page so
+   *  every already-fetched piece of state (not just this hook's) goes
+   *  back to reflecting the admin's own account. No-op if not
+   *  impersonating. */
+  exitImpersonation: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -129,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [account, setAccount] = useState<AccountSummary | null>(null);
+  const [impersonating, setImpersonating] = useState(false);
   const [loading, setLoading] = useState(true);
   // Tracked separately from `loading`. The session settles fast (one
   // local cookie read); the profile fetch crosses the network and
@@ -169,6 +180,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data) {
+        // Migration 080 — "Acessar Empresa". Only a platform admin can
+        // ever have a live grant (see admin_impersonation_sessions'
+        // SELECT policy: admin_user_id = auth.uid()), so gate the extra
+        // round trip on `is_platform_admin` — the overwhelming majority
+        // of users skip it entirely, same reasoning as the cookie gate
+        // in the server-side resolver (src/lib/auth/account.ts).
+        //
+        // When a grant is live, EVERYTHING below resolves off the
+        // TARGET account_id/role instead of this profile row's own —
+        // every page reads "which account am I in" through this hook,
+        // so this one seam is enough for the whole dashboard to show
+        // the target account, mirroring how `is_account_member` alone
+        // covers every RLS policy server-side.
+        let effectiveAccountId = data.account_id;
+        let effectiveAccountRole = data.account_role;
+        let impersonatingNow = false;
+        if (data.is_platform_admin) {
+          try {
+            const { data: grant } = await supabase
+              .from("admin_impersonation_sessions")
+              .select("target_account_id, target_role")
+              .eq("admin_user_id", userId)
+              .is("ended_at", null)
+              .gt("expires_at", new Date().toISOString())
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (grant) {
+              effectiveAccountId = grant.target_account_id as string;
+              effectiveAccountRole = grant.target_role as string;
+              impersonatingNow = true;
+            }
+          } catch (err) {
+            // Best-effort, same as the server-side resolver — a broken
+            // lookup must never block the admin's own profile from
+            // loading.
+            console.error("[AuthProvider] impersonation grant check threw:", err);
+          }
+        }
+        setImpersonating(impersonatingNow);
+
         // Load the account with a plain lookup by id instead of an
         // embedded FK join. The embed (`account:accounts!inner(...)`)
         // forces PostgREST to resolve the profiles.account_id →
@@ -180,14 +232,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // (with account_id / account_role) still resolves even if the
         // account name lookup itself can't.
         let accountRow: AccountSummary | null = null;
-        if (data.account_id) {
+        if (effectiveAccountId) {
           const { data: account, error: accountErr } = await supabase
             .from("accounts")
             // default_currency added in migration 021; narrowed to the
             // USD fallback below for older schemas where it reads null.
             // enabled_modules added in migration 041, status in 062.
             .select("id, name, default_currency, enabled_modules, status")
-            .eq("id", data.account_id)
+            .eq("id", effectiveAccountId)
             .maybeSingle();
           if (accountErr) {
             console.error("[AuthProvider] fetchAccount error:", {
@@ -212,8 +264,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // migration that broadens the enum without updating TS would
         // otherwise crash here — fall back to null and let UI gates
         // treat the caller as least-privileged.
-        const accountRole = isAccountRole(data.account_role)
-          ? data.account_role
+        const accountRole = isAccountRole(effectiveAccountRole)
+          ? effectiveAccountRole
           : null;
 
         setProfile({
@@ -227,7 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // (older deployments running 011 lazily) — `null` reads as no
           // opt-ins, which is the safe default for any future beta gate.
           beta_features: data.beta_features ?? [],
-          account_id: data.account_id ?? null,
+          account_id: effectiveAccountId ?? null,
           account_role: accountRole,
           is_platform_admin: data.is_platform_admin ?? false,
         });
@@ -305,6 +357,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastFetchedUserIdRef.current = null;
         setProfile(null);
         setAccount(null);
+        setImpersonating(false);
         setProfileLoading(false);
       }
 
@@ -331,6 +384,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user?.id) return;
     await fetchProfile(user.id);
   }, [user?.id, fetchProfile]);
+
+  const exitImpersonation = useCallback(async () => {
+    if (!impersonating) return;
+    try {
+      await fetch("/api/admin/impersonate/exit", { method: "POST" });
+    } catch (err) {
+      console.error("[AuthProvider] exitImpersonation failed:", err);
+    }
+    // Full reload, not just refreshProfile() — every already-fetched
+    // piece of page state (inbox, contacts, whatever was open) was
+    // loaded scoped to the target account and needs to start over
+    // scoped to the admin's own, not just this hook's derived fields.
+    window.location.href = "/admin";
+  }, [impersonating]);
 
   // Derive the role booleans once per profile change rather than on
   // every consumer render. Cheap regardless, but the memo also gives
@@ -364,6 +431,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshProfile,
         account,
         defaultCurrency: account?.default_currency ?? DEFAULT_CURRENCY,
+        isImpersonating: impersonating,
+        exitImpersonation,
         ...derived,
       }}
     >
@@ -405,6 +474,8 @@ export function useAuth(): AuthContextValue {
       canSendMessages: false,
       isPlatformAdmin: false,
       isSuspended: false,
+      isImpersonating: false,
+      exitImpersonation: async () => {},
     };
   }
   return ctx;

@@ -2,6 +2,39 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.26.0] — 2026-09-13
+
+### Adicionado
+
+- **"Acessar empresa" no admin** (aba Empresas) — pedido do Eder:
+  entrar no painel de qualquer conta como se fosse um usuário dela,
+  sem senha, direto de um botão. Novo botão (ícone de login) ao lado
+  do de suspender/reativar.
+  - Mecanismo: migration 080 cria `admin_impersonation_sessions` (um
+    "grant" temporário — 1h, sempre acesso completo como `owner`, um
+    ativo por vez — encerrar um anterior ao iniciar outro). A função
+    `is_account_member`, que TODA política de RLS do sistema já
+    consulta (migration 017), passa a reconhecer também um grant ativo
+    além da membership normal — ou seja, toda tabela do banco honra a
+    simulação automaticamente, sem tocar em nenhuma política
+    individualmente.
+  - Dois pontos na aplicação passam a preferir o grant sobre o próprio
+    perfil: `getCurrentAccount()`/`requireRole()` no servidor, e
+    `useAuth()` no cliente — cobre tanto as rotas de API quanto as
+    páginas que leem a conta atual direto do Supabase no navegador.
+  - Um cookie (`zdelivery_impersonating`, nunca confiado pelo valor —
+    só evita a query extra) faz com que os outros 99,9% das
+    requisições, de contas que nunca são o admin da plataforma, não
+    paguem custo nenhum a mais.
+  - Faixa amarela fixa no topo do painel avisa "Você está vendo o
+    painel como X" com botão "Sair da simulação" — sem isso seria fácil
+    esquecer em qual conta se está.
+  - Limitação conhecida, não resolvida agora: armazenamento por
+    usuário (avatar, mídia de flows) é escopado por usuário, não por
+    conta (decisão da própria migration 017) — não é coberto pela
+    simulação.
+  - 17 testes novos (`account.test.ts` + as duas rotas novas).
+
 ## [0.25.2] — 2026-09-13
 
 ### Corrigido

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Ban, CheckCircle2, Loader2 } from "lucide-react";
+import { Ban, CheckCircle2, LogIn, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,7 @@ export function AdminAccountsTab() {
   const [whatsappFilter, setWhatsappFilter] = useState("");
   const [planOptions, setPlanOptions] = useState<PlanOption[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [accessingId, setAccessingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setError(false);
@@ -132,6 +133,26 @@ export function AdminAccountsTab() {
       }
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function accessCompany(account: AdminAccountRow, e: React.MouseEvent) {
+    e.stopPropagation();
+    setAccessingId(account.id);
+    try {
+      const res = await fetch(`/api/admin/accounts/${account.id}/impersonate`, { method: "POST" });
+      if (res.ok) {
+        // Full navigation, not router.push — the dashboard shell's
+        // AuthProvider needs a fresh mount to pick up the new
+        // impersonation grant via useAuth's own profile fetch.
+        window.location.href = "/dashboard";
+        return;
+      }
+      toast.error(t("accessCompanyFailed"));
+    } catch {
+      toast.error(t("accessCompanyFailed"));
+    } finally {
+      setAccessingId(null);
     }
   }
 
@@ -310,21 +331,36 @@ export function AdminAccountsTab() {
                       {new Date(a.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        size="icon-xs"
-                        variant="ghost"
-                        title={a.status === "suspended" ? tDetail("reactivateAccount") : tDetail("suspendAccount")}
-                        disabled={busyId === a.id}
-                        onClick={(e) => toggleSuspend(a, e)}
-                      >
-                        {busyId === a.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : a.status === "suspended" ? (
-                          <CheckCircle2 className="h-4 w-4" />
-                        ) : (
-                          <Ban className="h-4 w-4" />
-                        )}
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          title={t("accessCompany")}
+                          disabled={accessingId === a.id}
+                          onClick={(e) => accessCompany(a, e)}
+                        >
+                          {accessingId === a.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <LogIn className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          title={a.status === "suspended" ? tDetail("reactivateAccount") : tDetail("suspendAccount")}
+                          disabled={busyId === a.id}
+                          onClick={(e) => toggleSuspend(a, e)}
+                        >
+                          {busyId === a.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : a.status === "suspended" ? (
+                            <CheckCircle2 className="h-4 w-4" />
+                          ) : (
+                            <Ban className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

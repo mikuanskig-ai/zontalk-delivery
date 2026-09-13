@@ -81,7 +81,10 @@
       "tabDashboard": "Dashboard",
       "tabAccounts": "Empresas",
       "tabFinance": "Financeiro",
-      "tabPlans": "Planos"
+      "tabPlans": "Planos",
+      "accessCompany": "Acessar empresa",
+      "accessCompanyStarting": "Entrando...",
+      "accessCompanyFailed": "Falha ao acessar a empresa."
     },
     "finance": {
       "filterFrom": "Data inicial",
@@ -2915,5 +2918,10 @@
     "welcomeToTeam": "Bem-vindo à equipe",
     "couldNotReachServer": "Não foi possível contatar o servidor",
     "couldNotSignOut": "Não foi possível sair. Tente atualizar a página."
+  },
+  "ImpersonationBanner": {
+    "viewingAs": "Você está vendo o painel como",
+    "exit": "Sair da simulação",
+    "exiting": "Saindo..."
   }
 }

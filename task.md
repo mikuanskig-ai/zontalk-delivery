@@ -110,6 +110,32 @@
 
 ## Feitas
 
+### 2026-09-13 — "Acessar empresa" no admin (impersonation)
+
+- Pedido do Eder (com print de referência): na aba Empresas do admin,
+  poder entrar no painel de qualquer conta como se fosse um usuário
+  dela, sem senha.
+- Migration 080: nova tabela `admin_impersonation_sessions` (grant
+  temporário, 1h, sempre `owner`, um ativo por admin) + `is_account_member`
+  (a função que TODA política de RLS já usa desde a 017) passa a
+  reconhecer também um grant ativo, além da membership normal — cobre
+  o banco inteiro de graça, sem tocar política por política.
+  `getCurrentAccount()`/`requireRole()` (servidor) e `useAuth()`
+  (cliente) preferem o grant sobre o perfil próprio quando ativo.
+  Cookie evita custo extra pra quem nunca é platform admin. Faixa
+  amarela fixa avisa "vendo como X" com botão de sair.
+- Aplicada em produção. 17 testes novos, 1116/1116 no total,
+  typecheck/lint/build limpos.
+- **Pendente**: não consegui validar o fluxo de ponta a ponta de
+  verdade (clicar no botão, ver o painel da empresa, sair) — não tenho
+  acesso a navegador neste ambiente, e escrever/apagar uma linha de
+  teste direto na tabela de produção foi bloqueado pelo classificador
+  de permissões (mexe em recurso compartilhado). A lógica está coberta
+  por teste automatizado espelhando exatamente as mesmas regras de
+  rank da migration 017, mas vale o Eder clicar em "Acessar empresa"
+  numa conta de teste e confirmar que abre certo e que "Sair da
+  simulação" volta pro admin.
+
 ### 2026-09-13 — IA "alucinando" preço do rodízio de domingo (busca da base de conhecimento retornava vazio) — Concórdia
 
 - Print do Eder: cliente perguntou "quanto é por pessoa pro almoço no

@@ -81,7 +81,10 @@
       "tabDashboard": "Dashboard",
       "tabAccounts": "Companies",
       "tabFinance": "Finance",
-      "tabPlans": "Plans"
+      "tabPlans": "Plans",
+      "accessCompany": "Access company",
+      "accessCompanyStarting": "Entering...",
+      "accessCompanyFailed": "Failed to access the company."
     },
     "finance": {
       "filterFrom": "Start date",
@@ -2915,5 +2918,10 @@
     "welcomeToTeam": "Welcome to the team",
     "couldNotReachServer": "Could not reach the server",
     "couldNotSignOut": "Could not sign out. Try refreshing the page."
+  },
+  "ImpersonationBanner": {
+    "viewingAs": "You are viewing the dashboard as",
+    "exit": "Exit impersonation",
+    "exiting": "Exiting..."
   }
 }
