@@ -2,6 +2,42 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.27.0] — 2026-09-14
+
+### Adicionado
+
+- **IA envia aviso automático de "estamos fechados" fora do horário
+  configurado** — investigando um relato do Eder ("por que a IA não
+  respondeu hoje?"), achei que pelo menos 4 clientes reais da
+  Concórdia mandaram mensagem pedindo marmita/taxa de entrega entre
+  08h55 e 09h34 de domingo (antes da abertura configurada, 10h) e não
+  receberam resposta nenhuma. Não era bug — o comportamento fora do
+  horário sempre foi silêncio total, de propósito (o mesmo número
+  também é usado pra conversa pessoal da família, então uma resposta
+  automática de "fechado" nem sempre fazia sentido). Decisão consciente
+  agora: melhor um "estamos fechados" ocasionalmente fora de contexto
+  numa thread pessoal do que um pedido de cliente real ficando sem
+  resposta nenhuma. Continua respeitando as outras regras de silêncio
+  (agente já atendendo, ticket ABERTO, auto-resposta desligada nessa
+  conversa) e não repete o aviso se a última mensagem já foi ele mesmo
+  — evita virar spam numa sequência de mensagens. Não consome cota de
+  resposta da IA (`ai_reply_count`) — é um aviso determinístico, não um
+  turno de conversa. 6 testes novos.
+- **"Desconectar" separado de "Excluir canal"** (Configurações →
+  WhatsApp) — pedido do Eder: até aqui só existia UM botão
+  ("Redefinir configuração") que desconectava a sessão do WuzAPI E
+  apagava contatos/conversas/negócios da conta inteira — e o próprio
+  diálogo de confirmação chamava isso de "Desconectar" mesmo apagando
+  tudo. Agora são duas ações de verdade:
+  - **Desconectar** (novo, `POST /api/whatsapp/config/disconnect`):
+    desloga a sessão do WuzAPI, mantém contatos/conversas/mensagens/
+    negócios intactos. Reconectar depois é só escanear o QR code de
+    novo.
+  - **Excluir canal** (era "Redefinir configuração", mesmo endpoint
+    `DELETE /api/whatsapp/config`, só relabeled): continua apagando
+    tudo — contatos, conversas, negócios — permanentemente.
+  - 5 testes novos na rota de desconectar.
+
 ## [0.26.1] — 2026-09-13
 
 ### Corrigido

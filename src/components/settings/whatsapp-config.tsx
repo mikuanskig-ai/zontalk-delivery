@@ -9,6 +9,7 @@ import {
   ExternalLink,
   AlertTriangle,
   RotateCcw,
+  Unplug,
   QrCode,
   Smartphone,
 } from 'lucide-react';
@@ -26,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
 
@@ -38,9 +40,11 @@ export function WhatsAppConfig() {
   // to redo anything.
   const { user, accountId, loading: authLoading, profileLoading } = useAuth();
 
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [loading, setLoading] = useState(true);
-  const [resetting, setResetting] = useState(false);
-  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [config, setConfig] = useState<WhatsAppConfigType | null>(null);
   // Guards against re-hydrating the form when the load effect below
   // re-runs for reasons unrelated to actually switching accounts —
@@ -108,26 +112,65 @@ export function WhatsAppConfig() {
     fetchConfig(accountId);
   }, [authLoading, profileLoading, user?.id, accountId, fetchConfig]);
 
-  async function handleConfirmReset() {
+  async function handleConfirmDelete() {
     try {
-      setResetting(true);
+      setDeleting(true);
       const res = await fetch('/api/whatsapp/config', { method: 'DELETE' });
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || t('resetFailed'));
+        toast.error(data.error || t('deleteFailed'));
         return;
       }
 
-      toast.success(t('resetSuccess'));
+      toast.success(t('deleteSuccess'));
       setConfig(null);
       setWuzapiPairingState('idle');
-      setShowResetDialog(false);
+      setShowDeleteDialog(false);
     } catch (err) {
-      console.error('Reset error:', err);
-      toast.error(t('resetFailed'));
+      console.error('Delete channel error:', err);
+      toast.error(t('deleteFailed'));
     } finally {
-      setResetting(false);
+      setDeleting(false);
+    }
+  }
+
+  /**
+   * "Desconectar" — logs the WuzAPI session out and marks the channel
+   * disconnected, but keeps every contact/conversation/message/deal AND
+   * the whatsapp_config row itself (instance name + token). Added
+   * 2026-09-14 after the button that did this used to be the SAME one
+   * that wipes all of that (still true of "Excluir canal" below) — the
+   * old single action's own dialog copy said "Desconectar" while
+   * actually deleting everything, which is exactly the confusion this
+   * splits apart. Reconnecting after this is just a fresh QR scan.
+   */
+  async function handleDisconnect() {
+    const ok = await confirm({
+      title: t('disconnectConfirmTitle'),
+      description: t('disconnectConfirmDesc'),
+      confirmLabel: t('disconnect'),
+    });
+    if (!ok) return;
+
+    try {
+      setDisconnecting(true);
+      const res = await fetch('/api/whatsapp/config/disconnect', { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || t('disconnectFailed'));
+        return;
+      }
+
+      toast.success(t('disconnectSuccess'));
+      setWuzapiPairingState('idle');
+      if (accountId) await fetchConfig(accountId);
+    } catch (err) {
+      console.error('Disconnect error:', err);
+      toast.error(t('disconnectFailed'));
+    } finally {
+      setDisconnecting(false);
     }
   }
 
@@ -356,22 +399,42 @@ export function WhatsAppConfig() {
               )}
             </Button>
           )}
+          {config?.wuzapi_instance_name && wuzapiPairingState === 'connected' && (
+            <Button
+              variant="outline"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="border-border text-muted-foreground hover:text-foreground"
+            >
+              {disconnecting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {t('disconnecting')}
+                </>
+              ) : (
+                <>
+                  <Unplug className="size-4" />
+                  {t('disconnect')}
+                </>
+              )}
+            </Button>
+          )}
           {config?.wuzapi_instance_name && (
             <Button
               variant="outline"
-              onClick={() => setShowResetDialog(true)}
-              disabled={resetting}
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={deleting}
               className="border-red-900 text-red-400 hover:text-red-300 hover:bg-red-950/40"
             >
-              {resetting ? (
+              {deleting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  {t('resetting')}
+                  {t('deleting')}
                 </>
               ) : (
                 <>
                   <RotateCcw className="size-4" />
-                  {t('resetConfig')}
+                  {t('deleteChannel')}
                 </>
               )}
             </Button>
@@ -411,19 +474,19 @@ export function WhatsAppConfig() {
       </div>
     </div>
     <Dialog
-      open={showResetDialog}
+      open={showDeleteDialog}
       onOpenChange={(open) => {
-        if (!open && !resetting) setShowResetDialog(false);
+        if (!open && !deleting) setShowDeleteDialog(false);
       }}
     >
       <DialogContent className="bg-popover border-border sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-popover-foreground">
             <AlertTriangle className="size-4 text-amber-400" />
-            {t('resetDialogTitle')}
+            {t('deleteDialogTitle')}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            {t.rich('resetDialogDesc', {
+            {t.rich('deleteDialogDesc', {
               bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>,
             })}
           </DialogDescription>
@@ -431,29 +494,30 @@ export function WhatsAppConfig() {
         <DialogFooter className="bg-popover border-border">
           <Button
             variant="outline"
-            onClick={() => setShowResetDialog(false)}
-            disabled={resetting}
+            onClick={() => setShowDeleteDialog(false)}
+            disabled={deleting}
             className="border-border text-muted-foreground hover:bg-muted"
           >
-            {t('resetDialogCancel')}
+            {t('deleteDialogCancel')}
           </Button>
           <Button
-            onClick={handleConfirmReset}
-            disabled={resetting}
+            onClick={handleConfirmDelete}
+            disabled={deleting}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
-            {resetting ? (
+            {deleting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                {t('resetting')}
+                {t('deleting')}
               </>
             ) : (
-              t('resetDialogConfirm')
+              t('deleteDialogConfirm')
             )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {confirmDialog}
     </section>
   );
 }

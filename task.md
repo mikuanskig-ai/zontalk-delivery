@@ -110,6 +110,29 @@
 
 ## Feitas
 
+### 2026-09-14 — Aviso automático de "fechado" fora do horário + Desconectar separado de Excluir canal
+
+- **Investigação "por que a IA não respondeu hoje"** (Concórdia):
+  achei pelo menos 4 clientes reais mandando "bom dia"/pedido de
+  marmita/pergunta de taxa de entrega entre 08h55-09h34 de domingo,
+  antes da abertura configurada (10h) — zero resposta, nem automática
+  nem humana (com 1 exceção manual). Não era bug: fora do horário
+  configurado sempre foi silêncio total, de propósito (número também
+  usado pra conversa pessoal da família).
+- Decisão do Eder: trocar silêncio por aviso automático de "estamos
+  fechados". Implementado com de-duplicação (não repete se a última
+  mensagem já foi o próprio aviso) e respeitando as outras regras de
+  silêncio (agente atendendo, ticket ABERTO, auto-resposta desligada
+  na conversa). Não consome cota de resposta da IA. 6 testes novos.
+- **De brinde, achado no meio da investigação**: o botão único
+  "Redefinir configuração" em Configurações → WhatsApp desconectava E
+  apagava contatos/conversas/negócios ao mesmo tempo — e o diálogo
+  chamava isso de "Desconectar" mesmo apagando tudo. Pedido do Eder:
+  separar em "Desconectar" (novo, mantém tudo, só desloga a sessão) e
+  "Excluir canal" (o botão antigo, relabeled, continua apagando tudo).
+  5 testes novos.
+- Deploy feito. 1130 testes no total, typecheck/lint/build limpos.
+
 ### 2026-09-13 — Status do WhatsApp inconsistente durante "Acessar empresa" (Concórdia)
 
 - Achado pelo Eder no primeiro teste real da simulação: Configurações

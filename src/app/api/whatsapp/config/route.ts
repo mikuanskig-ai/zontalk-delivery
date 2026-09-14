@@ -22,6 +22,13 @@ async function resolveAccountId(
 /**
  * DELETE /api/whatsapp/config
  *
+ * "Excluir canal" — the fully destructive action. For "just log this
+ * device out, keep my contacts/conversations" use
+ * `POST /api/whatsapp/config/disconnect` instead (added 2026-09-14,
+ * after this route's own confirmation dialog used to say
+ * "Desconectar" while actually wiping everything below — the two are
+ * now genuinely separate actions).
+ *
  * Fully disconnects the account's WhatsApp channel: logs the WuzAPI
  * session out (best-effort — a wuzapi-side failure must never block
  * local cleanup, since the operator can always kill the session

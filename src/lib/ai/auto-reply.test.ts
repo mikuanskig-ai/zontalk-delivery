@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AiConfig } from './types'
+import { closedMessage } from '@/lib/delivery/business-hours'
 
 // Shared, hoisted mock state so the module mocks can close over it.
 const h = vi.hoisted(() => ({
@@ -22,6 +23,9 @@ const h = vi.hoisted(() => ({
     // null = no AI-hours row configured — getAiBusinessHours returns
     // null, same as today's behavior (no hours gate at all).
     aiHours: null as { hours_enabled: boolean; hours_timezone: string; hours: unknown } | null,
+    // The conversation's own most recent message — only consulted by
+    // the closed-hours notice's de-dup check (sendClosedHoursNoticeIfEligible).
+    lastMessage: null as { sender_type: string; content_text: string } | null,
   },
 }))
 
@@ -70,6 +74,21 @@ vi.mock('./admin-client', () => ({
           select: () => ({
             eq: () => ({
               maybeSingle: () => Promise.resolve({ data: h.state.aiHours, error: null }),
+            }),
+          }),
+        }
+      }
+      if (table === 'messages') {
+        // .select().eq().order().limit().maybeSingle() → the closed-hours
+        // notice's own "did I already say this?" de-dup check.
+        return {
+          select: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: () => ({
+                  maybeSingle: () => Promise.resolve({ data: h.state.lastMessage, error: null }),
+                }),
+              }),
             }),
           }),
         }
@@ -136,6 +155,7 @@ beforeEach(() => {
   h.state.updatePayload = null
   h.state.rpcCalls = []
   h.state.aiHours = null
+  h.state.lastMessage = null
   h.loadAiConfig.mockResolvedValue(aiConfig())
   h.buildConversationContext.mockResolvedValue([{ role: 'user', content: 'hi' }])
   h.retrieveKnowledge.mockResolvedValue([])
@@ -199,15 +219,58 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.engineSendText).not.toHaveBeenCalled()
   })
 
-  it('skips silently — no auto-message — when outside the account-configured AI hours', async () => {
+  it('sends a deterministic "estamos fechados" notice instead of an LLM reply, when outside the account-configured AI hours (2026-09-14)', async () => {
     // Empty `hours` = closed every day (same convention as
     // business-hours.test.ts) — deterministic regardless of when this
     // test actually runs, no fake timers needed.
     h.state.aiHours = { hours_enabled: true, hours_timezone: 'UTC', hours: {} }
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReply).not.toHaveBeenCalled()
+    expect(h.engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ text: closedMessage({}), aiGenerated: false }),
+    )
+    // Deterministic system notice, not a conversational turn — must not
+    // eat into the customer's real-AI reply budget (claim_ai_reply_slot
+    // is never called on this path).
+    expect(h.state.rpcCalls).toHaveLength(0)
+    expect(h.state.updatePayload).toBeNull() // no handoff/state write either
+  })
+
+  it('does not repeat the closed-hours notice when it was already the conversation\'s last message', async () => {
+    h.state.aiHours = { hours_enabled: true, hours_timezone: 'UTC', hours: {} }
+    h.state.lastMessage = { sender_type: 'bot', content_text: closedMessage({}) }
+    await dispatchInboundToAiReply(ARGS)
     expect(h.engineSendText).not.toHaveBeenCalled()
-    expect(h.state.updatePayload).toBeNull() // no handoff/state write either — true silence
+  })
+
+  it('does send the closed-hours notice again if the last message was something else (e.g. staff replied in between)', async () => {
+    h.state.aiHours = { hours_enabled: true, hours_timezone: 'UTC', hours: {} }
+    h.state.lastMessage = { sender_type: 'agent', content_text: 'Oi, já te respondo' }
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ text: closedMessage({}) }),
+    )
+  })
+
+  it('does not send the closed-hours notice when a human agent already owns the thread', async () => {
+    h.state.aiHours = { hours_enabled: true, hours_timezone: 'UTC', hours: {} }
+    h.state.conv = { assigned_agent_id: 'agent-9', ai_autoreply_disabled: false, ai_reply_count: 0 }
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+
+  it('does not send the closed-hours notice when the ticket is ABERTO (status=open)', async () => {
+    h.state.aiHours = { hours_enabled: true, hours_timezone: 'UTC', hours: {} }
+    h.state.conv = { status: 'open', assigned_agent_id: null, ai_autoreply_disabled: false, ai_reply_count: 0 }
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+
+  it('does not send the closed-hours notice when auto-reply was turned off on this conversation (prior handoff)', async () => {
+    h.state.aiHours = { hours_enabled: true, hours_timezone: 'UTC', hours: {} }
+    h.state.conv = { assigned_agent_id: null, ai_autoreply_disabled: true, ai_reply_count: 0 }
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).not.toHaveBeenCalled()
   })
 
   it('ignores a configured hours schedule when hours_enabled is false', async () => {
