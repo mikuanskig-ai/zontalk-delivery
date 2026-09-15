@@ -1,4 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { supabaseAdmin } from './admin-client'
 import { loadAiConfig } from './config'
 import { buildConversationContext } from './context'
@@ -17,14 +16,7 @@ import type { ToolContext } from './tools/types'
 import { formatCurrency } from '@/lib/currency'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { sleep } from './debounce'
-import {
-  getAiBusinessHours,
-  getDailyMenu,
-  isWithinBusinessHours,
-  resolveDayKey,
-  closedMessage,
-  type BusinessHoursWeek,
-} from '@/lib/delivery/business-hours'
+import { getAiBusinessHours, getDailyMenu, isWithinBusinessHours, resolveDayKey } from '@/lib/delivery/business-hours'
 import { getPixKey } from '@/lib/payments/config'
 import type { AiUsage } from './types'
 
@@ -94,84 +86,6 @@ const ORDER_SUMMARY_WITH_PRICE_PATTERN = /total[^\n\d]{0,15}\d/i
 // mistake the real deterministic confirmation for a hallucinated one.
 const ORDER_COMPLETION_CLAIM_PATTERN = /pedido confirmado|passando (para|pra) a?\s*cozinha|indo (para|pra) a?\s*cozinha/i
 
-/**
- * Sends the deterministic "estamos fechados" notice for an inbound
- * message that arrived outside the account's configured AI hours.
- *
- * Added 2026-09-14 (Concórdia, reported by Eder — a Sunday-morning
- * customer asking about marmita pricing got no reply at all before
- * opening, and a few others the same day) — this used to be pure
- * silence, on purpose (see the doc comment on `dispatchInboundToAiReply`
- * for the original reasoning: the same WhatsApp number is often used
- * for personal chats too, and an automatic "closed" reply is the wrong
- * context there). That tradeoff is now a deliberate, informed choice
- * the other way: better one occasionally-out-of-place "estamos
- * fechados" on a personal thread than a real customer's order request
- * going completely unanswered.
- *
- * Still respects every other silencing rule (agent owns the thread,
- * ticket is ABERTO, auto-reply was turned off here) — a closed-hours
- * notice must never talk over a human who's already handling this
- * conversation. Does NOT consume an `ai_reply_count` slot (calls
- * `engineSendText` directly, bypassing `claim_ai_reply_slot`) — it's a
- * deterministic system notice, not a conversational turn, and
- * shouldn't eat into the customer's real-AI reply budget for once
- * hours reopen.
- *
- * De-duplicated by checking the conversation's own last message: if
- * the bot already sent this exact notice most recently, a second (or
- * third...) customer message in the same closed window stays silent
- * rather than repeating it — this is what keeps a multi-message burst
- * on a closed personal thread from turning into a "estamos fechados"
- * spam wall.
- */
-async function sendClosedHoursNoticeIfEligible(
-  db: SupabaseClient,
-  args: {
-    accountId: string
-    conversationId: string
-    contactId: string
-    configOwnerUserId: string
-    hours: BusinessHoursWeek
-  },
-): Promise<void> {
-  try {
-    const { data: c } = await db
-      .from('conversations')
-      .select('status, assigned_agent_id, ai_autoreply_disabled')
-      .eq('id', args.conversationId)
-      .maybeSingle()
-    if (!c) return
-    if (c.status === 'open') return // ABERTO — an agent owns this thread
-    if (c.assigned_agent_id) return // a human owns this thread
-    if (c.ai_autoreply_disabled) return // handed off / turned off here
-
-    const notice = closedMessage(args.hours)
-
-    const { data: last } = await db
-      .from('messages')
-      .select('sender_type, content_text')
-      .eq('conversation_id', args.conversationId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (last?.sender_type === 'bot' && last.content_text === notice) return // already told them
-
-    await engineSendText({
-      accountId: args.accountId,
-      userId: args.configOwnerUserId,
-      conversationId: args.conversationId,
-      contactId: args.contactId,
-      text: notice,
-      // Deterministic template, not an LLM turn — same reasoning as
-      // formatOrderConfirmation() above.
-      aiGenerated: false,
-    })
-  } catch (err) {
-    console.error('[ai auto-reply] failed to send closed-hours notice:', err)
-  }
-}
-
 /** Builds the deterministic (non-LLM) order-confirmation message. Kept
  *  as plain string formatting — not another provider round-trip — so a
  *  successful `place_order` can never leave a real order created with
@@ -210,13 +124,13 @@ function formatOrderConfirmation(order: PlacedOrderPayload, pixKey: string | nul
  * runner's contract: it owns its try/catch and NEVER throws — a failing
  * or slow LLM call must not affect the webhook's 200 to Meta.
  *
- * Eligibility gates (any → silent no-op, no LLM call):
+ * Eligibility gates (any → silent no-op):
  *   - AI off / auto-reply disabled for the account
- *   - outside the account's configured AI hours (migration 070), when
- *     that schedule is enabled — no LLM turn, but (2026-09-14) a
- *     deterministic "estamos fechados" notice still goes out, subject
- *     to its own smaller set of gates — see
- *     `sendClosedHoursNoticeIfEligible`'s doc
+ *   - outside the account's configured AI hours (migration 070),
+ *     when that schedule is enabled — no auto-message either, just
+ *     silence: the same WhatsApp number is often used for things
+ *     other than orders outside those hours, so a "we're closed"
+ *     reply would frequently be the wrong context to assume
  *   - the ticket is in the ABERTO bucket (status='open') — an agent is
  *     actively handling it and the AI must never talk over them. Every
  *     current write path that sets status='open' also stamps
@@ -247,22 +161,10 @@ export async function dispatchInboundToAiReply(
     if (!config || !config.autoReplyEnabled) return
 
     // Cheapest gate first — no DB read beyond the config already
-    // loaded above. Outside the window, no LLM turn happens — instead
-    // a deterministic "estamos fechados" notice goes out (see
-    // sendClosedHoursNoticeIfEligible's doc for why this changed from
-    // pure silence, and how it still respects every other silencing
-    // rule + avoids repeating itself on a burst of messages).
+    // loaded above. Outside the window, the bot goes fully silent
+    // (no auto-message) — see the doc comment above for why.
     const aiHours = await getAiBusinessHours(db, accountId)
-    if (aiHours?.enabled && !isWithinBusinessHours(aiHours.hours, aiHours.timezone)) {
-      await sendClosedHoursNoticeIfEligible(db, {
-        accountId,
-        conversationId,
-        contactId,
-        configOwnerUserId,
-        hours: aiHours.hours,
-      })
-      return
-    }
+    if (aiHours?.enabled && !isWithinBusinessHours(aiHours.hours, aiHours.timezone)) return
 
     // Same timezone the hours gate above already resolves "today" in —
     // deliberately kept in sync (see resolveDayKey's doc) so the menu
