@@ -19,6 +19,9 @@ vi.mock("@/lib/whatsapp/send-message", () => ({
 vi.mock("@/lib/contacts/tag-events", () => ({
   addContactTagAndDispatch: vi.fn(async () => ({ added: true, dispatched: true })),
 }));
+vi.mock("@/lib/integrations/meta-capi/dispatch-conversion", () => ({
+  dispatchMetaCapiConversion: vi.fn(async () => {}),
+}));
 
 import {
   computeCartTotal,
@@ -34,6 +37,7 @@ import { sendMessageToConversation } from "@/lib/whatsapp/send-message";
 import { addContactTagAndDispatch } from "@/lib/contacts/tag-events";
 import { dispatchWebhookEvent } from "@/lib/webhooks/deliver";
 import { runAutomationsForTrigger } from "@/lib/automations/engine";
+import { dispatchMetaCapiConversion } from "@/lib/integrations/meta-capi/dispatch-conversion";
 
 function line(overrides: Partial<CartLineItem> = {}): CartLineItem {
   return {
@@ -475,6 +479,7 @@ describe("finalizeDeliveryOrder — skipSideEffects (print simulator, 2026-09-07
     vi.mocked(addContactTagAndDispatch).mockClear();
     vi.mocked(dispatchWebhookEvent).mockClear();
     vi.mocked(runAutomationsForTrigger).mockClear();
+    vi.mocked(dispatchMetaCapiConversion).mockClear();
   });
 
   it("creates the order and items but skips every sale side effect when skipSideEffects is true", async () => {
@@ -508,6 +513,7 @@ describe("finalizeDeliveryOrder — skipSideEffects (print simulator, 2026-09-07
     expect(addContactTagAndDispatch).not.toHaveBeenCalled();
     expect(dispatchWebhookEvent).not.toHaveBeenCalled();
     expect(runAutomationsForTrigger).not.toHaveBeenCalled();
+    expect(dispatchMetaCapiConversion).not.toHaveBeenCalled();
   });
 
   it("stores a synthetic item's empty product_id as null, not an empty string (FK is nullable, not string-tolerant)", async () => {
@@ -553,5 +559,39 @@ describe("finalizeDeliveryOrder — skipSideEffects (print simulator, 2026-09-07
     expect(addContactTagAndDispatch).toHaveBeenCalledTimes(1);
     expect(dispatchWebhookEvent).toHaveBeenCalledTimes(1);
     expect(runAutomationsForTrigger).toHaveBeenCalledTimes(1);
+    expect(dispatchMetaCapiConversion).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("finalizeDeliveryOrder — Meta CAPI dispatch (2026-09-18)", () => {
+  beforeEach(() => {
+    vi.mocked(getPaymentConfigSecrets).mockReset();
+    vi.mocked(dispatchMetaCapiConversion).mockClear();
+  });
+
+  it("passes the order's own id/total/currency/contact through, so dispatch-conversion.ts can decide on its own whether this customer/account actually qualifies", async () => {
+    vi.mocked(getPaymentConfigSecrets).mockResolvedValue(null);
+    const { db } = makeOrdersDb({
+      baseOrder: { ...BASE_ORDER, id: "order-9", contact_id: "contact-1", total: 64, currency: "BRL" },
+    });
+
+    await finalizeDeliveryOrder(db, {
+      accountId: "acct-1",
+      contactId: "contact-1",
+      conversationId: null,
+      source: "manual",
+      cart: CART,
+      currency: "BRL",
+    });
+
+    expect(dispatchMetaCapiConversion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "acct-1",
+        contactId: "contact-1",
+        orderId: "order-9",
+        total: 64,
+        currency: "BRL",
+      }),
+    );
   });
 });

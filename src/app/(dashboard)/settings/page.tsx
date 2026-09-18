@@ -23,6 +23,7 @@ import { DeliveryFeeConfig } from '@/components/settings/delivery-fee-config';
 import { PublicMenuConfig } from '@/components/settings/public-menu-config';
 import { PrintConfig } from '@/components/settings/print-config';
 import { OrderTagConfig } from '@/components/settings/order-tag-config';
+import { MetaCapiConfig } from '@/components/settings/meta-capi-config';
 import { MembersTab } from '@/components/settings/members-tab';
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
 import {
@@ -93,6 +94,7 @@ function SettingsPageInner() {
     'public-menu': <PublicMenuConfig />,
     printing: <PrintConfig />,
     'order-tag': <OrderTagConfig />,
+    'meta-capi': <MetaCapiConfig />,
     members: <MembersTab />,
     api: <ApiKeysSettings />,
   };

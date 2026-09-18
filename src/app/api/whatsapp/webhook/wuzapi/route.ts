@@ -57,7 +57,7 @@ export const maxDuration = 60
 // type: "Message", userID }.
 // ============================================================
 
-interface WuzapiWebhookPayload {
+export interface WuzapiWebhookPayload {
   userID?: string
   type?: string
   event?: {
@@ -90,9 +90,9 @@ interface WuzapiWebhookPayload {
     }
     Message?: {
       conversation?: string
-      extendedTextMessage?: { text?: string }
-      imageMessage?: WuzapiEncryptedMediaFields & { caption?: string }
-      videoMessage?: WuzapiEncryptedMediaFields & { caption?: string }
+      extendedTextMessage?: { text?: string; contextInfo?: WuzapiContextInfo }
+      imageMessage?: WuzapiEncryptedMediaFields & { caption?: string; contextInfo?: WuzapiContextInfo }
+      videoMessage?: WuzapiEncryptedMediaFields & { caption?: string; contextInfo?: WuzapiContextInfo }
       audioMessage?: WuzapiEncryptedMediaFields
       documentMessage?: WuzapiEncryptedMediaFields & { caption?: string; fileName?: string }
       locationMessage?: { degreesLatitude?: number; degreesLongitude?: number; name?: string; address?: string }
@@ -118,19 +118,53 @@ interface WuzapiEncryptedMediaFields {
   fileLength?: number
 }
 
+/**
+ * Meta CAPI CTWA attribution (2026-09-18) — `externalAdReply.ctwaClid`
+ * is the click id whatsmeow attaches to the FIRST message a customer
+ * sends after tapping a "Clique para WhatsApp" ad, per the same
+ * proto field (`ContextInfo.ExternalAdReplyInfo`, field 13 `ctwaClid`)
+ * already confirmed decoded-as-string in the zontalk-crm sibling
+ * project's own investigation.
+ *
+ * ⚠️ NOT CONFIRMED against a real ad click arriving through THIS
+ * account's webhook yet — same caution as zontalk-crm's own migration
+ * 0105: best-effort only, logged when present so the first real hit is
+ * visible, never blocks message ingestion if absent or shaped
+ * differently than expected.
+ */
+interface WuzapiContextInfo {
+  externalAdReply?: {
+    ctwaClid?: string
+    sourceId?: string
+    sourceUrl?: string
+    title?: string
+  }
+}
+
 function bareJidToPhone(jid: string | undefined): string {
   if (!jid) return ''
   // "5491155554444.0:12@s.whatsapp.net" or "5491155554444@s.whatsapp.net"
   return jid.split('@')[0].split('.')[0].split(':')[0]
 }
 
-async function parseWuzapiEvent(
+export async function parseWuzapiEvent(
   payload: WuzapiWebhookPayload,
-): Promise<{ message: WhatsAppMessage; content: ParsedContent; pushName: string | null; isFromMe: boolean } | null> {
+): Promise<{ message: WhatsAppMessage; content: ParsedContent; pushName: string | null; isFromMe: boolean; ctwaClid: string | null } | null> {
   if (payload.type !== 'Message' || !payload.event?.Info || !payload.event.Message) {
     return null
   }
   const { Info, Message } = payload.event
+  // Meta CAPI CTWA attribution — see WuzapiContextInfo's doc. Computed
+  // once here (not confirmed live yet) and threaded through every
+  // return below so `POST` can pass it to `captureCtwaAttribution`.
+  const ctwaClid =
+    Message.extendedTextMessage?.contextInfo?.externalAdReply?.ctwaClid ||
+    Message.imageMessage?.contextInfo?.externalAdReply?.ctwaClid ||
+    Message.videoMessage?.contextInfo?.externalAdReply?.ctwaClid ||
+    null
+  if (ctwaClid) {
+    console.info('[wuzapi-webhook] CTWA ad-click attribution found on inbound message:', { ctwaClid })
+  }
   // `IsFromMe` = the agent sent this straight from their own paired
   // phone, outside the platform — no longer dropped (that used to
   // silently break the inbox thread for anyone messaging a contact
@@ -206,6 +240,7 @@ async function parseWuzapiEvent(
       },
       pushName,
       isFromMe,
+      ctwaClid,
     }
   }
 
@@ -228,6 +263,7 @@ async function parseWuzapiEvent(
       },
       pushName,
       isFromMe,
+      ctwaClid,
     }
   }
   if (Message.videoMessage) {
@@ -241,6 +277,7 @@ async function parseWuzapiEvent(
       },
       pushName,
       isFromMe,
+      ctwaClid,
     }
   }
   if (Message.audioMessage) {
@@ -249,6 +286,7 @@ async function parseWuzapiEvent(
       content: { contentText: null, mediaUrl: null, mediaType: Message.audioMessage.mimetype || null, interactiveReplyId: null },
       pushName,
       isFromMe,
+      ctwaClid,
     }
   }
   if (Message.documentMessage) {
@@ -262,6 +300,7 @@ async function parseWuzapiEvent(
       },
       pushName,
       isFromMe,
+      ctwaClid,
     }
   }
   if (Message.locationMessage) {
@@ -274,6 +313,7 @@ async function parseWuzapiEvent(
       content: { contentText: locationText, mediaUrl: null, mediaType: null, interactiveReplyId: null },
       pushName,
       isFromMe,
+      ctwaClid,
     }
   }
 
@@ -330,7 +370,7 @@ export async function POST(request: Request) {
       const parsed = await parseWuzapiEvent(payload)
       if (!parsed) return
 
-      const { message, content, pushName, isFromMe } = parsed
+      const { message, content, pushName, isFromMe, ctwaClid } = parsed
 
       // Media messages need accountId to build the storage path — the
       // parser above returns mediaUrl: null for those; resolve it here
@@ -482,6 +522,7 @@ export async function POST(request: Request) {
           config.user_id,
           resolvedContent,
           fetchAvatarUrl,
+          ctwaClid,
         )
       }
     } catch (error) {

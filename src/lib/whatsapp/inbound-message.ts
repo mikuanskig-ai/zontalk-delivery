@@ -493,6 +493,40 @@ async function findOrCreateConversation(
   return { conversation: newConv, created: true }
 }
 
+/**
+ * Meta CAPI (2026-09-18) — records the WhatsApp-ad click id
+ * (`ctwa_clid`) on the contact the FIRST time it's seen, mirroring
+ * `contacts.source_metadata`-style attribution already used in the
+ * sibling zontalk-crm project (`fn_capture_ctwa_attribution`,
+ * migration 0105). Write-once by design (the `is` filter below): only
+ * the very first message after an ad click carries this context —
+ * every reply after that is the customer typing, with no ad context
+ * attached, and must never overwrite a real attribution with nothing.
+ *
+ * Best-effort: never throws into the caller — a failed write here must
+ * never break message ingestion, same contract as every other
+ * fire-and-forget side effect in this file.
+ */
+export async function captureCtwaAttribution(
+  accountId: string,
+  contactId: string,
+  ctwaClid: string,
+): Promise<void> {
+  try {
+    const { error } = await supabaseAdmin()
+      .from('contacts')
+      .update({ ad_attribution: { ctwa_clid: ctwaClid, captured_at: new Date().toISOString() } })
+      .eq('id', contactId)
+      .eq('account_id', accountId)
+      .is('ad_attribution', null)
+    if (error) {
+      console.error('[inbound-message] captureCtwaAttribution failed:', error.message)
+    }
+  } catch (err) {
+    console.error('[inbound-message] captureCtwaAttribution threw:', err)
+  }
+}
+
 export async function processMessage(
   message: WhatsAppMessage,
   contact: { profile: { name: string | null }; wa_id: string },
@@ -507,6 +541,13 @@ export async function processMessage(
   precomputedContent: ParsedContent,
   /** WuzAPI-only — see `findOrCreateContact`'s matching parameter. */
   fetchAvatarUrl?: () => Promise<string | null>,
+  /**
+   * Meta CAPI (2026-09-18) — the `ctwa_clid` the wuzapi webhook route
+   * extracted from this message's `contextInfo.externalAdReply`, when
+   * present. Optional/best-effort at every layer — see
+   * `captureCtwaAttribution`'s own doc.
+   */
+  ctwaClid?: string | null,
 ) {
   const senderPhone = normalizePhone(message.from)
   const contactName = contact.profile.name
@@ -520,6 +561,10 @@ export async function processMessage(
   )
   if (!contactOutcome) return
   const contactRecord = contactOutcome.contact
+
+  if (ctwaClid) {
+    await captureCtwaAttribution(accountId, contactRecord.id, ctwaClid)
+  }
 
   if (contactOutcome.wasCreated) {
     await autoAddContactsToPipelines(supabaseAdmin(), accountId, configOwnerUserId, [

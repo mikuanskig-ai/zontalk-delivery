@@ -2,6 +2,49 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.28.0] — 2026-09-18
+
+### Adicionado
+
+- **Meta Ads (Clique para WhatsApp) — Meta Conversions API, modelo
+  "parceiro"** (Configurações → Meta Ads) — pedido do Eder: mesma ideia
+  já construída no zontalk-crm (fechar o funil de anúncio CTWA
+  avisando a Meta quando um lead vira venda), mas sem pedir Pixel
+  ID/token pro tenant. Em vez disso:
+  - O tenant adiciona o Business Manager do Zontalk como **parceiro**
+    no dele (um clique do lado dele: Configurações do negócio →
+    Parceiros → Adicionar → compartilha o Pixel + a Conta do WhatsApp
+    Business que usa nos anúncios).
+  - A plataforma usa **um único** token de Usuário de Sistema (do
+    PRÓPRIO Business Manager do Zontalk, não por conta) pra descobrir
+    (`GET /{business_id}/client_pixels` e `client_whatsapp_business_accounts`)
+    e usar esses ativos — zero segredo por conta.
+  - O admin só escolhe numa lista (auto-descoberta) qual Pixel/WABA é
+    o dele — nunca digita ID nem token.
+  - Gatilho do evento "Purchase": pedido de delivery criado de
+    verdade (`finalizeDeliveryOrder`, exclui os de teste do
+    simulador), quando o contato tem atribuição de clique de anúncio
+    (`contacts.ad_attribution`, capturada da primeira mensagem depois
+    do clique — `contextInfo.externalAdReply.ctwaClid` do protocolo
+    whatsmeow, mesma extração feita no zontalk-crm).
+  - Botão "Enviar evento de teste" (usa o código de teste do
+    Gerenciador de Eventos da Meta) pra verificar sem precisar de um
+    pedido real vindo de anúncio.
+  - Migration 081. 53 testes novos (1183 no total).
+  - **Pendente pra ativar de verdade**: preciso que você crie um
+    Usuário de Sistema no Business Manager do Zontalk (Configurações
+    do negócio → Usuários → Usuários do sistema → gerar token com
+    escopo `ads_management`/`business_management`) e me passe o token
+    + o ID do Business Manager — viram as variáveis de ambiente
+    `META_CAPI_SYSTEM_USER_TOKEN`/`META_CAPI_BUSINESS_ID` no servidor.
+    Até lá, a tela mostra "recurso ainda não habilitado" pra qualquer
+    conta.
+  - **Não confirmado ao vivo ainda** (mesma cautela do zontalk-crm): a
+    extração do `ctwa_clid` do payload real do WuzAPI, e os nomes
+    exatos dos campos retornados por `client_pixels`/
+    `client_whatsapp_business_accounts` — só dá pra confirmar de
+    verdade com o token criado e um clique real em anúncio chegando.
+
 ## [0.27.0] — 2026-09-14
 
 ### Adicionado

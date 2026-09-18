@@ -6,6 +6,20 @@
 
 ## Pendentes
 
+- [ ] **Ativar Meta Ads (CTWA) de verdade** — falta o Eder criar um
+  Usuário de Sistema no Business Manager do Zontalk (Configurações do
+  negócio → Usuários → Usuários do sistema → gerar token com escopo
+  `ads_management`/`business_management`) e passar o token + o ID do
+  Business Manager, pra virarem `META_CAPI_SYSTEM_USER_TOKEN`/
+  `META_CAPI_BUSINESS_ID` no servidor. Até lá a tela em Configurações →
+  Meta Ads mostra "recurso ainda não habilitado" pra qualquer conta.
+  Também vale confirmar ao vivo, assim que possível: (a) o
+  `ctwa_clid` realmente chega no payload do webhook do WuzAPI quando um
+  cliente clica num anúncio "Clique para WhatsApp" e manda a primeira
+  mensagem (extração especulativa, nunca confirmada — mesma cautela já
+  documentada no zontalk-crm); (b) os nomes exatos dos campos que a
+  Meta retorna em `client_pixels`/`client_whatsapp_business_accounts`
+  batem com o que `discover-assets.ts` espera.
 - [ ] **Causa raiz de por que a IA recriou o pedido do Rogério (31/08)
   não foi resolvida** — o pedido já tinha sido confirmado e "enviado
   pra cozinha" quando o cliente mandou uma mensagem de acompanhamento
@@ -109,6 +123,31 @@
   não é sintoma de algo pior.
 
 ## Feitas
+
+### 2026-09-18 — Meta Ads (CTWA) via Meta Conversions API, modelo "parceiro"
+
+- Pedido do Eder: mesma ideia já construída no zontalk-crm (avisar a
+  Meta quando um lead vira venda, pra fechar o funil de anúncio
+  "Clique para WhatsApp"), mas sem pedir Pixel ID nem token de acesso
+  pro cliente digitar.
+- Modelo "parceiro": o cliente compartilha o Pixel + a Conta do
+  WhatsApp Business com o Business Manager do Zontalk (um clique do
+  lado dele, fora do painel); a plataforma usa UM token de Usuário de
+  Sistema do PRÓPRIO Business Manager pra descobrir e usar esses
+  ativos via API — zero segredo por conta. O admin só escolhe numa
+  lista auto-descoberta.
+- Gatilho: pedido de delivery criado de verdade (exclui os de teste do
+  simulador), quando o contato veio de um clique de anúncio
+  (`contacts.ad_attribution`, capturado da primeira mensagem —
+  `contextInfo.externalAdReply.ctwaClid`).
+- Tela em Configurações → Meta Ads: instruções + ID do BM pra
+  compartilhar, busca de ativos, vincular, toggle ativo/inativo,
+  código de teste + botão de teste, desvincular.
+- Migration 081. 53 testes novos (1183 no total). Deploy feito.
+- **Pendente**: token de Usuário de Sistema (ver Pendentes) — sem ele
+  o recurso fica inerte (mostra "não habilitado ainda") em toda conta.
+  Também pendente confirmar ao vivo a extração do `ctwa_clid` e os
+  nomes de campo da API de descoberta — ver Pendentes.
 
 ### 2026-09-14 — Aviso automático de "fechado" fora do horário + Desconectar separado de Excluir canal
 

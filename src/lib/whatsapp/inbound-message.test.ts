@@ -1,5 +1,35 @@
-import { describe, expect, it } from 'vitest'
-import { isValidStatusTransition, shouldDispatchAiReply } from './inbound-message'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+
+const h = vi.hoisted(() => ({ updateCalls: [] as { payload: unknown; eqArgs: [string, unknown][] }[], error: null as unknown }))
+
+// `supabaseAdmin()` is a local lazy-singleton inside inbound-message.ts
+// itself (not a separate module) that calls `createClient` from
+// `@supabase/supabase-js` — mocked at that source instead.
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: () => ({
+    from: () => {
+      const call: { payload: unknown; eqArgs: [string, unknown][] } = { payload: null, eqArgs: [] }
+      const chain = {
+        update: (payload: unknown) => {
+          call.payload = payload
+          return chain
+        },
+        eq: (col: string, val: unknown) => {
+          call.eqArgs.push([col, val])
+          return chain
+        },
+        is: (col: string, val: unknown) => {
+          call.eqArgs.push([col, val])
+          h.updateCalls.push(call)
+          return Promise.resolve({ error: h.error })
+        },
+      }
+      return chain
+    },
+  }),
+}))
+
+import { isValidStatusTransition, shouldDispatchAiReply, captureCtwaAttribution } from './inbound-message'
 
 describe('isValidStatusTransition', () => {
   it('allows forward moves along the ladder', () => {
@@ -54,5 +84,30 @@ describe('shouldDispatchAiReply', () => {
 
   it('refuses blank/whitespace-only text', () => {
     expect(shouldDispatchAiReply({ ...base, inboundText: '   ' })).toBe(false)
+  })
+})
+
+describe('captureCtwaAttribution — Meta CAPI (2026-09-18)', () => {
+  beforeEach(() => {
+    h.updateCalls = []
+    h.error = null
+  })
+
+  it('writes ad_attribution scoped to both contact_id and account_id, only when currently null', async () => {
+    await captureCtwaAttribution('acct-1', 'contact-1', 'clid-123')
+
+    expect(h.updateCalls).toHaveLength(1)
+    const call = h.updateCalls[0]
+    expect(call.payload).toMatchObject({ ad_attribution: expect.objectContaining({ ctwa_clid: 'clid-123' }) })
+    expect(call.eqArgs).toEqual([
+      ['id', 'contact-1'],
+      ['account_id', 'acct-1'],
+      ['ad_attribution', null],
+    ])
+  })
+
+  it('never throws when the write fails — must never break inbound message ingestion', async () => {
+    h.error = { message: 'boom' }
+    await expect(captureCtwaAttribution('acct-1', 'contact-1', 'clid-123')).resolves.toBeUndefined()
   })
 })

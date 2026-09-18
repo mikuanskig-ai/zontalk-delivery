@@ -18,6 +18,7 @@ import { sendMessageToConversation } from '@/lib/whatsapp/send-message';
 import { formatCurrency } from '@/lib/currency';
 import { enqueuePrintJob } from '@/lib/delivery/print-queue';
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events';
+import { dispatchMetaCapiConversion } from '@/lib/integrations/meta-capi/dispatch-conversion';
 
 export interface CartLineItemAddon {
   group_id: string;
@@ -336,6 +337,21 @@ export async function finalizeDeliveryOrder(
         order_checkout_url: order.checkout_url,
       },
     },
+  });
+
+  // Meta CAPI (2026-09-18) — fecha o funil de anúncio "Clique para
+  // WhatsApp" quando este pedido veio de um clique de anúncio
+  // (contact.ad_attribution) e a conta linkou um Pixel/WABA. Best-effort,
+  // resolve internamente pra um no-op silencioso na esmagadora maioria
+  // dos pedidos (conta sem CAPI configurado, ou cliente que não veio de
+  // anúncio) — ver dispatch-conversion.ts.
+  await dispatchMetaCapiConversion({
+    db,
+    accountId: args.accountId,
+    contactId: order.contact_id,
+    orderId: order.id,
+    total: order.total,
+    currency: order.currency,
   });
 
   return order;
