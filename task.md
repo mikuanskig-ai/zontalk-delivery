@@ -6,20 +6,26 @@
 
 ## Pendentes
 
-- [ ] **Ativar Meta Ads (CTWA) de verdade** — falta o Eder criar um
-  Usuário de Sistema no Business Manager do Zontalk (Configurações do
-  negócio → Usuários → Usuários do sistema → gerar token com escopo
-  `ads_management`/`business_management`) e passar o token + o ID do
-  Business Manager, pra virarem `META_CAPI_SYSTEM_USER_TOKEN`/
-  `META_CAPI_BUSINESS_ID` no servidor. Até lá a tela em Configurações →
-  Meta Ads mostra "recurso ainda não habilitado" pra qualquer conta.
-  Também vale confirmar ao vivo, assim que possível: (a) o
-  `ctwa_clid` realmente chega no payload do webhook do WuzAPI quando um
-  cliente clica num anúncio "Clique para WhatsApp" e manda a primeira
-  mensagem (extração especulativa, nunca confirmada — mesma cautela já
-  documentada no zontalk-crm); (b) os nomes exatos dos campos que a
-  Meta retorna em `client_pixels`/`client_whatsapp_business_accounts`
-  batem com o que `discover-assets.ts` espera.
+- [ ] **Meta Ads (CTWA) — plataforma pronta, falta exercitar o fluxo
+  real com uma conta de cliente.** Resolvido nesta sessão: token de
+  Usuário de Sistema gerado com o escopo certo
+  (`ads_management`/`business_management`/`whatsapp_business_management`),
+  `META_CAPI_SYSTEM_USER_TOKEN`/`META_CAPI_BUSINESS_ID` configurados
+  no servidor, e os dois campos de descoberta confirmados ao vivo
+  contra a API real da Meta: `client_pixels` e
+  `client_whatsapp_business_accounts` retornam `{"data":[]}` (nomes de
+  campo corretos, `discover-assets.ts` bate com a API). Tela em
+  Configurações → Meta Ads não mostra mais "recurso não habilitado".
+  Ainda falta: (a) o Eder de fato compartilhar o Pixel/WABA de uma
+  conta real (ex: Concórdia) como parceiro no BM da Meta e confirmar
+  que a busca automática encontra — teste em 2026-09-18 não achou
+  nada mesmo após "adicionar" (root cause provável: opção errada no
+  popup do Meta, ou parceiro adicionado sem selecionar os ativos —
+  ver 0.28.1 que adicionou vínculo manual como contorno enquanto isso
+  não é confirmado); (b) o `ctwa_clid` realmente chegar no payload do
+  webhook do WuzAPI quando um cliente clica num anúncio de verdade e
+  manda a primeira mensagem (extração especulativa, nunca confirmada
+  — mesma cautela já documentada no zontalk-crm).
 - [ ] **Causa raiz de por que a IA recriou o pedido do Rogério (31/08)
   não foi resolvida** — o pedido já tinha sido confirmado e "enviado
   pra cozinha" quando o cliente mandou uma mensagem de acompanhamento
@@ -144,8 +150,27 @@
   compartilhar, busca de ativos, vincular, toggle ativo/inativo,
   código de teste + botão de teste, desvincular.
 - Migration 081. 53 testes novos (1183 no total). Deploy feito.
-- **Pendente**: token de Usuário de Sistema (ver Pendentes) — sem ele
-  o recurso fica inerte (mostra "não habilitado ainda") em toda conta.
+- **Atualização mesma sessão, depois do deploy inicial**: Eder gerou o
+  token de Usuário de Sistema e passou junto o Business ID
+  (`485341827223434`); primeiro token veio sem o escopo
+  `whatsapp_business_management` (confirmado via erro real da API —
+  `client_pixels` funcionava, `client_whatsapp_business_accounts` dava
+  `(#200) permissão negada`), Eder gerou um segundo token já com o
+  escopo certo — verificado ao vivo (`GET /debug_token`, ambos os
+  campos de descoberta retornando `{"data":[]}`), servidor reiniciado
+  com o token bom. Recurso está ativo de verdade agora, não mais
+  "não habilitado".
+- **v0.28.1 — vínculo manual como contorno**: Eder testou compartilhar
+  o Pixel/WABA como parceiro no Business Manager da Meta, mas a busca
+  automática continuou vazia mesmo depois de "adicionar" — root cause
+  provável é ter escolhido a opção errada no popup de "Adicionar"
+  (existem duas: "conceder acesso" vs "pedir pra atribuir", só a
+  primeira funciona aqui) ou ter fechado antes de marcar os ativos
+  específicos pra compartilhar. Enquanto isso não é confirmado
+  visualmente do lado dele, adicionei em Configurações → Meta Ads um
+  link "Não apareceu? Inserir os IDs manualmente" com dois campos
+  (Pixel ID, WhatsApp Business Account ID) que vincula direto, sem
+  depender da descoberta automática.
   Também pendente confirmar ao vivo a extração do `ctwa_clid` e os
   nomes de campo da API de descoberta — ver Pendentes.
 

@@ -69,6 +69,11 @@ export function MetaCapiConfig() {
   const [pickedWaba, setPickedWaba] = useState<string>('');
   const [linking, setLinking] = useState(false);
 
+  const [showManual, setShowManual] = useState(false);
+  const [manualPixelId, setManualPixelId] = useState('');
+  const [manualWabaId, setManualWabaId] = useState('');
+  const [manualLinking, setManualLinking] = useState(false);
+
   const [savingActive, setSavingActive] = useState(false);
   const [testEventCode, setTestEventCode] = useState('');
   const [savingCode, setSavingCode] = useState(false);
@@ -159,6 +164,40 @@ export function MetaCapiConfig() {
       toast.error(t('linkFailed'));
     } finally {
       setLinking(false);
+    }
+  }
+
+  async function handleManualLink() {
+    const pixelId = manualPixelId.trim();
+    const wabaId = manualWabaId.trim();
+    if (!pixelId || !wabaId) return;
+
+    setManualLinking(true);
+    try {
+      const res = await fetch('/api/integrations/meta-capi/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pixel_id: pixelId,
+          pixel_name: pixelId,
+          whatsapp_business_account_id: wabaId,
+          whatsapp_business_account_name: wabaId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? t('linkFailed'));
+        return;
+      }
+      toast.success(t('linkSuccess'));
+      setManualPixelId('');
+      setManualWabaId('');
+      setShowManual(false);
+      await fetchConfig();
+    } catch {
+      toast.error(t('linkFailed'));
+    } finally {
+      setManualLinking(false);
     }
   }
 
@@ -361,6 +400,58 @@ export function MetaCapiConfig() {
                     </div>
                   )
                 )}
+
+                <div className="border-t border-border pt-4">
+                  {!showManual ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowManual(true)}
+                      className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                    >
+                      {t('manualToggle')}
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{t('manualTitle')}</p>
+                        <p className="text-xs text-muted-foreground">{t('manualDesc')}</p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                            {t('manualPixelIdLabel')}
+                          </p>
+                          <Input
+                            value={manualPixelId}
+                            onChange={(e) => setManualPixelId(e.target.value)}
+                            placeholder={t('manualPixelIdPlaceholder')}
+                            className="font-mono"
+                          />
+                        </div>
+                        <div>
+                          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                            {t('manualWabaIdLabel')}
+                          </p>
+                          <Input
+                            value={manualWabaId}
+                            onChange={(e) => setManualWabaId(e.target.value)}
+                            placeholder={t('manualWabaIdPlaceholder')}
+                            className="font-mono"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleManualLink}
+                        disabled={manualLinking || !manualPixelId.trim() || !manualWabaId.trim()}
+                      >
+                        {manualLinking ? <Loader2 className="size-4 animate-spin" /> : null}
+                        {manualLinking ? t('linking') : t('manualLinkButton')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}

@@ -2,6 +2,23 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.28.1] — 2026-09-18
+
+### Adicionado
+
+- **Meta Ads — vínculo manual de Pixel/WhatsApp Business Account**
+  (Configurações → Meta Ads, Passo 2) — o compartilhamento via
+  "Parceiro" no Business Manager da Meta pode ficar preso numa etapa
+  intermediária (parceiro adicionado mas ativo não selecionado, ou
+  opção errada escolhida no popup de "Adicionar"), fazendo a busca
+  automática (`client_pixels`/`client_whatsapp_business_accounts`)
+  retornar vazia mesmo com o passo 1 aparentemente concluído. Agora
+  existe um link "Não apareceu? Inserir os IDs manualmente" que abre
+  dois campos (ID do Pixel, ID da Conta do WhatsApp Business) e
+  vincula direto, sem depender da descoberta automática — o backend
+  (`/api/integrations/meta-capi/link`) já aceitava qualquer id/nome
+  não vazio, então não precisou mudar validação, só a UI.
+
 ## [0.28.0] — 2026-09-18
 
 ### Adicionado
