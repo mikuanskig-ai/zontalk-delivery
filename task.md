@@ -130,6 +130,22 @@
 
 ## Feitas
 
+### 2026-09-20 — Monitor do agente de impressão (v0.31.0)
+
+- Pedido do Eder: saber se o Zontalk Print Agent foi aberto no
+  estabelecimento ou continua fechado.
+- Achado ao vivo: Concórdia com agente sem sinal desde 11:05 e 11 pedidos
+  `pending` (o mais antigo às 11:29) — ninguém percebia, o status só
+  existia em Configurações → Impressão.
+- Feito: faixa vermelha para a conta (agente silencioso > 2 min + fila
+  > 0) e coluna "Impressão" na aba Empresas do admin. 13 testes novos.
+- **Não feito (proposta)**: avisar o dono por WhatsApp/e-mail quando o
+  agente cair com fila — hoje o alerta só aparece se alguém estiver com
+  o sistema aberto. Decidir canal e destinatário antes de construir.
+- **Não coberto**: agente aberto mas com a impressora física travada
+  (sem papel, desligada) — o sinal de vida continua chegando; isso
+  aparece como jobs `failed`, não como agente offline.
+
 ### 2026-09-20 — IA vazava chamada de função como texto pro cliente (v0.30.1)
 
 - Cliente da Concórdia recebeu "```commentary to=functions.update_order_info

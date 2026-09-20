@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requirePlatformAdmin } from '@/lib/auth/platform-admin'
 import { toErrorResponse } from '@/lib/auth/account'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
+import { computePrintAgentStatus } from '@/lib/delivery/print-agent-status'
 
 /**
  * GET /api/admin/accounts  (platform admin only)
@@ -35,7 +36,15 @@ export async function GET() {
     const accountIds = accounts.map((a) => a.id as string)
     const planIds = [...new Set(accounts.map((a) => a.plan_id as string | null).filter((id): id is string => !!id))]
 
-    const [{ data: owners }, { data: configs }, { data: plans }, { data: outstandingInvoices }, { data: paidInvoices }] =
+    const [
+      { data: owners },
+      { data: configs },
+      { data: plans },
+      { data: outstandingInvoices },
+      { data: paidInvoices },
+      { data: printConfigs },
+      { data: pendingPrintJobs },
+    ] =
       await Promise.all([
         admin
           .from('profiles')
@@ -59,6 +68,10 @@ export async function GET() {
         // (Fase 4 of the platform admin expansion) so an admin can see
         // who's actually paying without opening each account.
         admin.from('invoices').select('account_id, amount_cents').in('account_id', accountIds).eq('status', 'paid'),
+        // Print agent heartbeat (print_configs.last_polled_at) + how many
+        // jobs are waiting — the Empresas tab's "Impressão" column.
+        admin.from('print_configs').select('account_id, enabled, last_polled_at').in('account_id', accountIds),
+        admin.from('print_jobs').select('account_id').in('account_id', accountIds).in('status', ['pending', 'claimed']),
       ])
 
     const ownerByAccount = new Map((owners ?? []).map((o) => [o.account_id as string, o.email as string]))
@@ -85,6 +98,25 @@ export async function GET() {
       revenueByAccount.set(accId, (revenueByAccount.get(accId) ?? 0) + (inv.amount_cents as number))
     }
 
+    const pendingPrintByAccount = new Map<string, number>()
+    for (const j of pendingPrintJobs ?? []) {
+      const accId = j.account_id as string
+      pendingPrintByAccount.set(accId, (pendingPrintByAccount.get(accId) ?? 0) + 1)
+    }
+    const printByAccount = new Map(
+      (printConfigs ?? []).map((p) => [
+        p.account_id as string,
+        {
+          ...computePrintAgentStatus({
+            enabled: p.enabled as boolean,
+            lastPolledAt: p.last_polled_at as string | null,
+            pendingCount: pendingPrintByAccount.get(p.account_id as string) ?? 0,
+          }),
+          last_polled_at: p.last_polled_at as string | null,
+        },
+      ]),
+    )
+
     const result = accounts.map((a) => ({
       id: a.id,
       name: a.name,
@@ -95,6 +127,7 @@ export async function GET() {
       created_at: a.created_at,
       owner_email: ownerByAccount.get(a.id as string) ?? null,
       whatsapp: whatsappByAccount.get(a.id as string) ?? null,
+      print_agent: printByAccount.get(a.id as string) ?? null,
       plan_id: a.plan_id,
       plan_name: a.plan_id ? (planNameById.get(a.plan_id as string) ?? null) : null,
       billing_status: billingStatusByAccount.get(a.id as string) ?? 'current',

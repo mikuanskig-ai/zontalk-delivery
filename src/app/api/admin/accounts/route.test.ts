@@ -87,4 +87,31 @@ describe('GET /api/admin/accounts', () => {
     expect(a1).toMatchObject({ plan_id: 'p1', plan_name: 'Premium', billing_status: 'overdue', revenue_paid_cents: 29400 })
     expect(a2).toMatchObject({ plan_id: null, plan_name: null, billing_status: 'current', revenue_paid_cents: 0 })
   })
+  it('reports the print agent per account: online, offline-with-queue, and no entry when never configured', async () => {
+    const recent = new Date(Date.now() - 20_000).toISOString()
+    const stale = new Date(Date.now() - 3 * 3600_000).toISOString()
+    h.db = fakeDb({
+      accounts: [
+        [
+          { id: 'a1', name: 'Online', slug: 'a1', status: 'active', suspended_reason: null, enabled_modules: ['delivery'], plan_id: null, created_at: '2026-01-01' },
+          { id: 'a2', name: 'Offline com fila', slug: 'a2', status: 'active', suspended_reason: null, enabled_modules: ['delivery'], plan_id: null, created_at: '2026-01-02' },
+          { id: 'a3', name: 'Sem impressão', slug: 'a3', status: 'active', suspended_reason: null, enabled_modules: [], plan_id: null, created_at: '2026-01-03' },
+        ],
+      ],
+      print_configs: [
+        [
+          { account_id: 'a1', enabled: true, last_polled_at: recent },
+          { account_id: 'a2', enabled: true, last_polled_at: stale },
+        ],
+      ],
+      print_jobs: [[{ account_id: 'a2' }, { account_id: 'a2' }, { account_id: 'a1' }]],
+    })
+
+    const body = await (await GET()).json()
+    const by = (id: string) => body.accounts.find((a: { id: string }) => a.id === id)
+
+    expect(by('a1').print_agent).toMatchObject({ online: true, needsAttention: false, pendingCount: 1 })
+    expect(by('a2').print_agent).toMatchObject({ online: false, needsAttention: true, pendingCount: 2 })
+    expect(by('a3').print_agent).toBeNull()
+  })
 })

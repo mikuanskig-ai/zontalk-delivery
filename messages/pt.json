@@ -61,6 +61,10 @@
       "colRevenue": "Receita",
       "colModules": "Módulos",
       "colWhatsapp": "WhatsApp",
+      "colPrint": "Impressão",
+      "printOnline": "Online",
+      "printOffline": "Offline",
+      "printOfflinePending": "Offline · {count} na fila",
       "colStatus": "Status",
       "colCreatedAt": "Criada em",
       "colActions": "Ações",
@@ -2996,5 +3000,16 @@
     "viewingAs": "Você está vendo o painel como",
     "exit": "Sair da simulação",
     "exiting": "Saindo..."
+  },
+  "PrintAgentBanner": {
+    "offline": "Agente de impressão desligado.",
+    "waiting": "{count} {count, plural, =1 {pedido aguardando} other {pedidos aguardando}} impressão",
+    "since": "desde as {time}",
+    "neverSeen": "nunca se conectou",
+    "lastSeen": "último sinal há {time}",
+    "minutes": "{count} min",
+    "hours": "{count} {count, plural, =1 {hora} other {horas}}",
+    "hint": "Abra o Zontalk Print Agent no computador da cozinha.",
+    "details": "Ver impressão"
   }
 }

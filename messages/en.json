@@ -61,6 +61,10 @@
       "colRevenue": "Revenue",
       "colModules": "Modules",
       "colWhatsapp": "WhatsApp",
+      "colPrint": "Printing",
+      "printOnline": "Online",
+      "printOffline": "Offline",
+      "printOfflinePending": "Offline · {count} queued",
       "colStatus": "Status",
       "colCreatedAt": "Created",
       "colActions": "Actions",
@@ -2996,5 +3000,16 @@
     "viewingAs": "You are viewing the dashboard as",
     "exit": "Exit impersonation",
     "exiting": "Exiting..."
+  },
+  "PrintAgentBanner": {
+    "offline": "Print agent is offline.",
+    "waiting": "{count} {count, plural, =1 {order waiting} other {orders waiting}} to print",
+    "since": "since {time}",
+    "neverSeen": "never connected",
+    "lastSeen": "last seen {time} ago",
+    "minutes": "{count} min",
+    "hours": "{count} {count, plural, =1 {hour} other {hours}}",
+    "hint": "Open the Zontalk Print Agent on the kitchen computer.",
+    "details": "View printing"
   }
 }

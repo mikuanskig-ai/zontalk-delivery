@@ -2,6 +2,30 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.31.0] — 2026-09-20
+
+### Adicionado
+
+- **Alerta de "agente de impressão desligado"** — o Zontalk Print Agent já
+  manda um sinal de vida a cada ~5s (cada consulta a `/api/v1/print-jobs`
+  grava `print_configs.last_polled_at`), mas o status só aparecia dentro
+  de Configurações → Impressão, então ninguém via quando o agente não era
+  aberto. Agora, para todos os usuários de uma conta de Delivery com
+  impressão automática ligada, aparece uma faixa vermelha no topo de
+  qualquer tela quando o agente ficou sem sinal por mais de 2 minutos E
+  existem pedidos esperando impressão: "Agente de impressão desligado. N
+  pedidos aguardando impressão desde HH:MM · último sinal há X. Abra o
+  Zontalk Print Agent no computador da cozinha." (atualiza a cada 60s).
+  Agente offline sem nada na fila (loja fechada) não alerta — evita ruído
+  fora do expediente. Nova rota `GET /api/delivery/print-status`; lógica
+  em `src/lib/delivery/print-agent-status.ts` (janela de 2 min de
+  propósito bem maior que os 10s da tela de pareamento: reinício ou
+  oscilação de Wi-Fi não deve disparar alarme).
+- **Coluna "Impressão" na aba Empresas do Admin** — Online / Offline ·
+  N na fila (vermelho) / Offline (sem fila) / "—" (impressão desligada),
+  para o admin da plataforma enxergar de todos os estabelecimentos quem
+  está com o agente parado.
+
 ## [0.30.1] — 2026-09-20
 
 ### Corrigido

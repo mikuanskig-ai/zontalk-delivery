@@ -36,6 +36,7 @@ interface AdminAccountRow {
   created_at: string;
   owner_email: string | null;
   whatsapp: { status: string; connected_at: string | null } | null;
+  print_agent: { enabled: boolean; online: boolean; needsAttention: boolean; pendingCount: number } | null;
   plan_id: string | null;
   plan_name: string | null;
   billing_status: "current" | "pending" | "overdue";
@@ -255,6 +256,7 @@ export function AdminAccountsTab() {
                   <TableHead>{t("colRevenue")}</TableHead>
                   <TableHead>{t("colModules")}</TableHead>
                   <TableHead>{t("colWhatsapp")}</TableHead>
+                  <TableHead>{t("colPrint")}</TableHead>
                   <TableHead>{t("colStatus")}</TableHead>
                   <TableHead>{t("colCreatedAt")}</TableHead>
                   <TableHead>{t("colActions")}</TableHead>
@@ -321,6 +323,19 @@ export function AdminAccountsTab() {
                       <Badge variant={a.whatsapp?.status === "connected" ? "secondary" : "outline"}>
                         {a.whatsapp?.status === "connected" ? t("whatsappConnected") : t("whatsappDisconnected")}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {!a.print_agent?.enabled ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : a.print_agent.online ? (
+                        <Badge variant="secondary">{t("printOnline")}</Badge>
+                      ) : a.print_agent.needsAttention ? (
+                        <Badge variant="destructive">
+                          {t("printOfflinePending", { count: a.print_agent.pendingCount })}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">{t("printOffline")}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={a.status === "suspended" ? "destructive" : "secondary"}>

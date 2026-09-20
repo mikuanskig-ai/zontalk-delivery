@@ -61,6 +61,10 @@
       "colRevenue": "매출",
       "colModules": "모듈",
       "colWhatsapp": "WhatsApp",
+      "colPrint": "출력",
+      "printOnline": "온라인",
+      "printOffline": "오프라인",
+      "printOfflinePending": "오프라인 · 대기 {count}건",
       "colStatus": "상태",
       "colCreatedAt": "생성일",
       "colActions": "작업",
@@ -2995,5 +2999,16 @@
     "viewingAs": "다음 계정으로 대시보드를 보는 중입니다",
     "exit": "접속 종료",
     "exiting": "종료 중..."
+  },
+  "PrintAgentBanner": {
+    "offline": "프린트 에이전트가 꺼져 있습니다.",
+    "waiting": "출력 대기 주문 {count}건",
+    "since": "{time}부터",
+    "neverSeen": "연결된 적 없음",
+    "lastSeen": "마지막 신호 {time} 전",
+    "minutes": "{count}분",
+    "hours": "{count}시간",
+    "hint": "주방 컴퓨터에서 Zontalk Print Agent를 실행하세요.",
+    "details": "출력 설정 보기"
   }
 }
