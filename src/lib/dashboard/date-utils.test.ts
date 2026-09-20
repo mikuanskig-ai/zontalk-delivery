@@ -4,7 +4,9 @@ import {
   daysAgoStart,
   lastNDayKeys,
   localDayKey,
+  isTodayWindow,
   mondayIndex,
+  previousWindow,
   startOfLocalDay,
 } from "./date-utils";
 
@@ -119,5 +121,29 @@ describe("mondayIndex", () => {
     expect(DOW_SHORT_MON_FIRST[mondayIndex(new Date("2026-05-24"))]).toBe(
       "Sun",
     );
+  });
+});
+
+describe("previousWindow", () => {
+  it("returns the equally long window right before the given one", () => {
+    const from = new Date("2026-09-10T00:00:00.000Z");
+    const to = new Date("2026-09-19T23:59:59.999Z"); // 10 days
+    const prev = previousWindow({ from, to });
+    expect(prev.to.getTime()).toBe(from.getTime() - 1);
+    expect(prev.from.toISOString()).toBe("2026-08-31T00:00:00.000Z");
+  });
+});
+
+describe("isTodayWindow", () => {
+  it("is true for the current local day and false otherwise", () => {
+    const start = startOfLocalDay();
+    const end = new Date(start);
+    end.setHours(23, 59, 59, 999);
+    expect(isTodayWindow({ from: start, to: end })).toBe(true);
+
+    const yesterday = new Date(start);
+    yesterday.setDate(yesterday.getDate() - 1);
+    expect(isTodayWindow({ from: yesterday, to: end })).toBe(false);
+    expect(isTodayWindow(null)).toBe(false);
   });
 });

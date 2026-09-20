@@ -2,6 +2,36 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.29.0] — 2026-09-20
+
+### Adicionado
+
+- **Filtro de período no topo do Painel** — seletor de datas
+  (Hoje, Ontem, Essa semana, Semana passada, 30/90 dias, Todo o período
+  ou intervalo personalizado) ao lado do título. Padrão: Hoje. Controla
+  os cards "Novos contatos" e "Mensagens enviadas" (que passam a mostrar
+  "no período" e comparar com o período anterior de mesmo tamanho;
+  em "Hoje" continuam "hoje / vs. ontem") e todo o bloco de Delivery.
+  Conversas ativas e negócios em aberto seguem sendo números do momento;
+  o gráfico de conversas mantém as abas próprias de 7/30/90 dias.
+- **Cards de pedidos no bloco Delivery do Painel**: Pedidos (quantidade),
+  Valor dos pedidos e **Faturado (impressos)** — soma dos pedidos que já
+  tiveram pelo menos uma impressão concluída, com "X de Y pedidos
+  impressos". Pedido reimpresso não é somado duas vezes.
+  (migration 082, RPC `delivery_orders_summary`)
+
+### Corrigido
+
+- **Funil de clientes não batia com a aba Pedidos.** "Converteram" só
+  contava contatos criados dentro do período; pedido de cliente antigo
+  ficava de fora (ex.: 8 pedidos hoje, funil mostrava 4). Agora
+  "Clientes que pediram" = clientes distintos com 1+ pedido não
+  cancelado no período, independente de quando o contato foi criado.
+  Recorrentes (2+) e fiéis (3+) continuam vitalícios, dentro desse
+  grupo. O "% dos novos contatos" saiu do card (poderia passar de 100%).
+  Filtro de período do funil agora é o do topo do Painel (removido o
+  seletor duplicado de dentro do funil). (migration 082)
+
 ## [0.28.1] — 2026-09-18
 
 ### Adicionado

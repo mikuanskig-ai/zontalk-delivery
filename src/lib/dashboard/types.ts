@@ -9,10 +9,12 @@ export interface MetricDelta {
 
 export interface MetricsBundle {
   activeConversations: MetricDelta
-  newContactsToday: MetricDelta
+  /** Contacts created inside the dashboard's selected period. */
+  newContacts: MetricDelta
   openDealsValue: number
   openDealsCount: number
-  messagesSentToday: MetricDelta
+  /** Agent/bot messages sent inside the selected period. */
+  messagesSent: MetricDelta
 }
 
 export interface ConversationsSeriesPoint {
@@ -54,6 +56,15 @@ export interface DeliveryFunnelData {
   returningCustomers: number
   loyalCustomers: number
   unattributedOrders: number
+}
+
+export interface DeliveryOrdersSummary {
+  /** Non-cancelled orders in the period — same set as the Pedidos list. */
+  ordersCount: number
+  ordersTotal: number
+  /** Subset of the above with >=1 completed print job ("faturado"). */
+  printedCount: number
+  printedTotal: number
 }
 
 export type ActivityKind =

@@ -50,3 +50,22 @@ export function mondayIndex(d: Date): number {
 }
 
 export const DOW_SHORT_MON_FIRST = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
+
+export interface DateWindow {
+  from: Date
+  to: Date
+}
+
+/** Same-length window immediately before `w` (for "vs previous period"). */
+export function previousWindow(w: DateWindow): DateWindow {
+  const len = w.to.getTime() - w.from.getTime() + 1
+  return { from: new Date(w.from.getTime() - len), to: new Date(w.from.getTime() - 1) }
+}
+
+/** True when the window is exactly the current local day (drives the
+ *  "hoje / vs ontem" wording instead of "no período / vs anterior"). */
+export function isTodayWindow(w: DateWindow | null): boolean {
+  if (!w) return false
+  const start = startOfLocalDay().getTime()
+  return w.from.getTime() === start && w.to.getTime() - start < 24 * 60 * 60 * 1000
+}

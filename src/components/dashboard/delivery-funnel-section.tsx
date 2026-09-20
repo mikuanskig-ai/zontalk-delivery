@@ -2,28 +2,22 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { startOfDay, endOfDay, subDays } from 'date-fns'
-import { AlertTriangle, Info, Users, ShoppingBag, Repeat2, Heart } from 'lucide-react'
+import { AlertTriangle, Info, Users, ShoppingBag, Repeat2, Heart, Receipt, Printer } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { hasModule } from '@/lib/accounts/modules'
-import { loadDeliveryFunnel } from '@/lib/dashboard/delivery-funnel'
-import type { DeliveryFunnelData } from '@/lib/dashboard/types'
-import { OrderDateRangeFilter, type OrderDateRange } from '@/components/delivery/order-date-range-filter'
+import { formatCurrency } from '@/lib/currency'
+import { loadDeliveryFunnel, loadDeliveryOrdersSummary } from '@/lib/dashboard/delivery-funnel'
+import type { DeliveryFunnelData, DeliveryOrdersSummary } from '@/lib/dashboard/types'
+import type { OrderDateRange } from '@/components/delivery/order-date-range-filter'
 import { Button } from '@/components/ui/button'
 import { MetricCard } from './metric-card'
 import { SkeletonCard } from './skeleton'
 import { EmptyState } from './empty-state'
 
-// "Todo o período" (value === null on the filter) resolves to this —
-// treated as "since the account's creation" rather than blocked.
+// "Todo o período" (range === null) resolves to this — treated as
+// "since the account's creation" rather than blocked.
 const EPOCH = new Date(0)
-
-// Mirrors the "last30Days" preset in order-date-range-filter.tsx
-// (not exported from there — duplicated on purpose, it's two lines).
-function defaultRange(): OrderDateRange {
-  return { from: startOfDay(subDays(new Date(), 29)), to: endOfDay(new Date()) }
-}
 
 function pctLabel(part: number, base: number, suffix: string): string | undefined {
   if (base <= 0) return undefined
@@ -31,22 +25,22 @@ function pctLabel(part: number, base: number, suffix: string): string | undefine
 }
 
 /**
- * Delivery customer funnel — novos contatos → converteram (1+ pedido)
- * → recorrentes (2+) → fiéis (3+), scoped to the selected date range
- * (recurrence itself is always lifetime — see migration 076's header
- * comment). Renders nothing while the profile is loading or when the
- * delivery module is off — self-contained gate, same as the other
- * delivery-only pages (pedidos/cardapio/operacao), since the
- * dashboard has no shared section-gating infra today.
+ * Delivery block of the dashboard, scoped to the period picked in the
+ * page header: order/revenue summary (Pedidos, valor, faturado =
+ * impressos) + the customer funnel (novos contatos → converteram →
+ * recorrentes → fiéis). "Converteram" = clientes distintos com 1+
+ * pedido NO período (bate com a aba Pedidos); recorrência é sempre
+ * vitalícia — ver migration 082. Renders nothing while the profile is
+ * loading or when the delivery module is off.
  */
-export function DeliveryFunnelSection() {
+export function DeliveryFunnelSection({ range }: { range: OrderDateRange | null }) {
   const t = useTranslations('Dashboard.deliveryFunnel')
   const tLoadError = useTranslations('Dashboard.loadError')
-  const { account, accountId, profileLoading } = useAuth()
+  const { account, accountId, profileLoading, defaultCurrency } = useAuth()
   const moduleEnabled = hasModule(account, 'delivery')
 
-  const [range, setRange] = useState<OrderDateRange | null>(defaultRange())
   const [data, setData] = useState<DeliveryFunnelData | null>(null)
+  const [summary, setSummary] = useState<DeliveryOrdersSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
@@ -56,8 +50,14 @@ export function DeliveryFunnelSection() {
     setError(false)
     const db = createClient()
     const effective = range ?? { from: EPOCH, to: new Date() }
-    void loadDeliveryFunnel(db, accountId, effective)
-      .then(setData)
+    void Promise.all([
+      loadDeliveryFunnel(db, accountId, effective),
+      loadDeliveryOrdersSummary(db, accountId, effective),
+    ])
+      .then(([funnel, orders]) => {
+        setData(funnel)
+        setSummary(orders)
+      })
       .catch((err) => {
         console.error('[dashboard] delivery funnel failed:', err)
         setError(true)
@@ -75,12 +75,9 @@ export function DeliveryFunnelSection() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">{t('description')}</p>
-        </div>
-        <OrderDateRangeFilter value={range} onChange={setRange} />
+      <div>
+        <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">{t('description')}</p>
       </div>
 
       {error ? (
@@ -94,21 +91,38 @@ export function DeliveryFunnelSection() {
             </Button>
           }
         />
-      ) : loading || !data ? (
+      ) : loading || !data || !summary ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: 8 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard
+              title={t('ordersCount')}
+              value={summary.ordersCount.toLocaleString()}
+              icon={ShoppingBag}
+            />
+            <MetricCard
+              title={t('ordersTotal')}
+              value={formatCurrency(summary.ordersTotal, defaultCurrency)}
+              icon={Receipt}
+            />
+            <MetricCard
+              title={t('printedTotal')}
+              value={formatCurrency(summary.printedTotal, defaultCurrency)}
+              icon={Printer}
+              subtitle={t('printedCount', { printed: summary.printedCount, total: summary.ordersCount })}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard title={t('newContacts')} value={data.newContacts.toLocaleString()} icon={Users} />
             <MetricCard
               title={t('orderingCustomers')}
               value={data.orderingCustomers.toLocaleString()}
               icon={ShoppingBag}
-              subtitle={pctLabel(data.orderingCustomers, data.newContacts, t('ofNewContacts'))}
             />
             <MetricCard
               title={t('returningCustomers')}

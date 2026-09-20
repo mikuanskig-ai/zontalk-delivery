@@ -5,7 +5,9 @@ import {
   lastNDayKeys,
   localDayKey,
   mondayIndex,
+  previousWindow,
   startOfLocalDay,
+  type DateWindow,
 } from './date-utils'
 import type {
   ActivityItem,
@@ -29,19 +31,43 @@ type DB = SupabaseClient
 
 // --- 1. Metric cards ---------------------------------------------------
 
-export async function loadMetrics(db: DB): Promise<MetricsBundle> {
+/**
+ * `range` drives the two period cards (novos contatos, mensagens
+ * enviadas) plus their delta vs the equally long window right before
+ * it. `null` = "todo o período" (previous = 0, the UI hides the delta).
+ * Conversas ativas / negócios em aberto are current-state numbers and
+ * ignore it.
+ */
+export async function loadMetrics(
+  db: DB,
+  range: DateWindow | null = { from: startOfLocalDay(), to: new Date() },
+): Promise<MetricsBundle> {
   const todayStart = startOfLocalDay().toISOString()
   const yesterdayStart = daysAgoStart(1).toISOString()
+
+  const bounded = <T extends { gte: (c: string, v: string) => T; lte: (c: string, v: string) => T }>(
+    q: T,
+    w: DateWindow | null,
+  ): T => (w ? q.gte('created_at', w.from.toISOString()).lte('created_at', w.to.toISOString()) : q)
+  const prev = range ? previousWindow(range) : null
+
+  const contactsIn = (w: DateWindow | null) =>
+    bounded(db.from('contacts').select('id', { count: 'exact', head: true }), w)
+  const messagesIn = (w: DateWindow | null) =>
+    bounded(
+      db.from('messages').select('id', { count: 'exact', head: true }).eq('sender_type', 'agent'),
+      w,
+    )
 
   const [
     openConvCur,
     newConvToday,
     newConvYesterday,
-    newContactsToday,
-    newContactsYesterday,
+    contactsCur,
+    contactsPrev,
     openDeals,
-    messagesToday,
-    messagesYesterday,
+    messagesCur,
+    messagesPrev,
   ] = await Promise.all([
     db.from('conversations').select('id', { count: 'exact', head: true }).eq('status', 'open'),
     db
@@ -55,24 +81,11 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       .eq('status', 'open')
       .gte('created_at', yesterdayStart)
       .lt('created_at', todayStart),
-    db.from('contacts').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
-    db
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', yesterdayStart)
-      .lt('created_at', todayStart),
+    contactsIn(range),
+    prev ? contactsIn(prev) : Promise.resolve({ count: 0 }),
     db.from('deals').select('value, status').eq('status', 'open'),
-    db
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('sender_type', 'agent')
-      .gte('created_at', todayStart),
-    db
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('sender_type', 'agent')
-      .gte('created_at', yesterdayStart)
-      .lt('created_at', todayStart),
+    messagesIn(range),
+    prev ? messagesIn(prev) : Promise.resolve({ count: 0 }),
   ])
 
   const openDealsRows = (openDeals.data ?? []) as { value: number | null }[]
@@ -86,16 +99,10 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       // today vs yesterday. That's the business-meaningful daily signal.
       previous: (newConvToday.count ?? 0) - (newConvYesterday.count ?? 0),
     },
-    newContactsToday: {
-      current: newContactsToday.count ?? 0,
-      previous: newContactsYesterday.count ?? 0,
-    },
+    newContacts: { current: contactsCur.count ?? 0, previous: contactsPrev.count ?? 0 },
     openDealsValue,
     openDealsCount: openDealsRows.length,
-    messagesSentToday: {
-      current: messagesToday.count ?? 0,
-      previous: messagesYesterday.count ?? 0,
-    },
+    messagesSent: { current: messagesCur.count ?? 0, previous: messagesPrev.count ?? 0 },
   }
 }
 

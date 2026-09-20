@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { loadDeliveryFunnel } from './delivery-funnel'
+import { loadDeliveryFunnel, loadDeliveryOrdersSummary } from './delivery-funnel'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 function makeDb(row: Record<string, unknown> | null, error: unknown = null) {
@@ -51,6 +51,33 @@ describe('loadDeliveryFunnel', () => {
     const db = makeDb(null, new Error('boom'))
     await expect(
       loadDeliveryFunnel(db, 'acc-1', { from: new Date(), to: new Date() }),
+    ).rejects.toThrow('boom')
+  })
+})
+
+describe('loadDeliveryOrdersSummary', () => {
+  it('maps the RPC row (bigint/numeric as strings) to numbers', async () => {
+    const db = makeDb({
+      orders_count: '8',
+      orders_total: '445.00',
+      printed_count: '2',
+      printed_total: '67.00',
+    })
+    const from = new Date('2026-09-20T03:00:00.000Z')
+    const to = new Date('2026-09-21T02:59:59.999Z')
+    const result = await loadDeliveryOrdersSummary(db, 'acc-1', { from, to })
+    expect(result).toEqual({ ordersCount: 8, ordersTotal: 445, printedCount: 2, printedTotal: 67 })
+    expect(db.rpc).toHaveBeenCalledWith('delivery_orders_summary', {
+      p_account_id: 'acc-1',
+      p_from: from.toISOString(),
+      p_to: to.toISOString(),
+    })
+  })
+
+  it('propagates an error when the RPC fails', async () => {
+    const db = makeDb(null, new Error('boom'))
+    await expect(
+      loadDeliveryOrdersSummary(db, 'acc-1', { from: new Date(), to: new Date() }),
     ).rejects.toThrow('boom')
   })
 })

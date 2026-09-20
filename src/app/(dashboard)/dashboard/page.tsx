@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from 'react'
+import { startOfDay, endOfDay } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { formatCurrency } from '@/lib/currency'
@@ -12,6 +13,8 @@ import {
   Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { OrderDateRangeFilter, type OrderDateRange } from '@/components/delivery/order-date-range-filter'
+import { isTodayWindow } from '@/lib/dashboard/date-utils'
 
 import {
   loadActivity,
@@ -47,6 +50,12 @@ export default function DashboardPage() {
   const t = useTranslations('Dashboard.page')
   const tLoadError = useTranslations('Dashboard.loadError')
   const { defaultCurrency } = useAuth()
+  // Period filter shared by the header cards and the Delivery block.
+  // Default "Hoje" matches the historical wording of the top cards.
+  const [period, setPeriod] = useState<OrderDateRange | null>(() => ({
+    from: startOfDay(new Date()),
+    to: endOfDay(new Date()),
+  }))
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState(false)
@@ -82,14 +91,14 @@ export default function DashboardPage() {
     setMetricsLoading(true)
     setMetricsError(false)
     const db = createClient()
-    void loadMetrics(db)
+    void loadMetrics(db, period)
       .then((m) => setMetrics(m))
       .catch((err) => {
         console.error('[dashboard] metrics failed:', err)
         setMetricsError(true)
       })
       .finally(() => setMetricsLoading(false))
-  }, [])
+  }, [period])
 
   const loadSeriesSection = useCallback((r: RangeDays) => {
     setSeriesLoading(true)
@@ -148,6 +157,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadMetricsSection()
+  }, [loadMetricsSection])
+
+  useEffect(() => {
     loadSeriesSection(30)
     loadPipelineSection()
     loadResponseTimeSection()
@@ -170,14 +182,20 @@ export default function DashboardPage() {
     [series, loadSeriesSection],
   )
 
+  const isToday = isTodayWindow(period)
+  const vsLabel = isToday ? t('vsYesterday') : t('vsPreviousPeriod')
+
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('description')}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('description')}
+          </p>
+        </div>
+        <OrderDateRangeFilter value={period} onChange={setPeriod} />
       </div>
 
       {/* First-login checklist — renders nothing once dismissed/complete
@@ -217,18 +235,21 @@ export default function DashboardPage() {
               }}
             />
             <MetricCard
-              title={t('newContactsToday')}
-              value={metrics.newContactsToday.current.toLocaleString()}
+              title={isToday ? t('newContactsToday') : t('newContactsPeriod')}
+              value={metrics.newContacts.current.toLocaleString()}
               icon={UserPlus}
-              delta={{
-                sign:
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                label: deltaLabel(
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                  t('vsYesterday'),
-                  t('noChange', { suffix: t('vsYesterday') })
-                ),
-              }}
+              delta={
+                period
+                  ? {
+                      sign: metrics.newContacts.current - metrics.newContacts.previous,
+                      label: deltaLabel(
+                        metrics.newContacts.current - metrics.newContacts.previous,
+                        vsLabel,
+                        t('noChange', { suffix: vsLabel }),
+                      ),
+                    }
+                  : undefined
+              }
             />
             <MetricCard
               title={t('openDealsValue')}
@@ -237,18 +258,21 @@ export default function DashboardPage() {
               subtitle={t('openDeals', { count: metrics.openDealsCount })}
             />
             <MetricCard
-              title={t('messagesSentToday')}
-              value={metrics.messagesSentToday.current.toLocaleString()}
+              title={isToday ? t('messagesSentToday') : t('messagesSentPeriod')}
+              value={metrics.messagesSent.current.toLocaleString()}
               icon={Send}
-              delta={{
-                sign:
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                label: deltaLabel(
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                  t('vsYesterday'),
-                  t('noChange', { suffix: t('vsYesterday') })
-                ),
-              }}
+              delta={
+                period
+                  ? {
+                      sign: metrics.messagesSent.current - metrics.messagesSent.previous,
+                      label: deltaLabel(
+                        metrics.messagesSent.current - metrics.messagesSent.previous,
+                        vsLabel,
+                        t('noChange', { suffix: vsLabel }),
+                      ),
+                    }
+                  : undefined
+              }
             />
           </>
         )}
@@ -260,7 +284,7 @@ export default function DashboardPage() {
       {/* Delivery: funil de conversão/recorrência de clientes. Renderiza
           null internamente se o módulo delivery estiver desligado ou o
           perfil ainda estiver carregando — nenhuma condicional aqui. */}
-      <DeliveryFunnelSection />
+      <DeliveryFunnelSection range={period} />
 
       {/* Charts row */}
       {/* items-stretch (the grid default) stretches the two columns to

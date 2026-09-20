@@ -130,6 +130,25 @@
 
 ## Feitas
 
+### 2026-09-20 — Painel: filtro de período, cards de pedidos/faturado, funil corrigido
+
+- Pedido do Eder: filtro de datas no topo do Painel, funil de Delivery
+  não batia com a aba Pedidos, mostrar valor faturado (impressos).
+- Causa do funil errado: "converteram" só contava contatos criados no
+  período (definição de 04/09) — pedidos de clientes antigos sumiam.
+  Conferido no banco da Concórdia em 20/09: 8 pedidos (R$ 445), 8
+  clientes distintos, 5 de contatos novos + 3 de contatos antigos; o
+  funil antigo só enxergaria os 5. Redefinido (migration 082, já
+  aplicada em produção antes do deploy) e validado: funil = 8, resumo =
+  8 pedidos / R$ 445 / 2 impressos R$ 67.
+- Filtro no topo controla cards de período + bloco Delivery; gráfico
+  de conversas mantém 7/30/90.
+- 4 testes novos (1187 no total). v0.29.0.
+- Observação da investigação: na hora da conferência havia 6 pedidos do
+  dia com impressão `pending` (R$ 378) e só 2 `printed` — se o agente
+  de impressão estava desligado/fora do ar, o "Faturado (impressos)"
+  vai ficar abaixo do valor real até imprimir. Vale conferir o agente.
+
 ### 2026-09-18 — Meta Ads (CTWA) via Meta Conversions API, modelo "parceiro"
 
 - Pedido do Eder: mesma ideia já construída no zontalk-crm (avisar a
