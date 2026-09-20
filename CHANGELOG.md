@@ -2,6 +2,19 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.29.1] — 2026-09-20
+
+### Alterado
+
+- **Funil de clientes do Painel agora é desenhado como funil**: as
+  quatro etapas (Novos contatos → Clientes que pediram → Recorrentes →
+  Clientes fiéis) viram faixas empilhadas que afunilam, com valor e
+  percentual dentro de cada uma, no lugar dos quatro cards lado a lado.
+  A largura das faixas é um afunilamento fixo (não proporcional ao
+  valor) — as etapas não são mais estritamente aninhadas desde a
+  0.29.0, então proporcional poderia inverter o funil; os números é
+  que carregam a informação.
+
 ## [0.29.0] — 2026-09-20
 
 ### Adicionado

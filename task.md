@@ -144,6 +144,8 @@
 - Filtro no topo controla cards de período + bloco Delivery; gráfico
   de conversas mantém 7/30/90.
 - 4 testes novos (1187 no total). v0.29.0.
+- v0.29.1: funil desenhado como funil (faixas empilhadas que afunilam,
+  `funnel-stack.tsx`), a pedido do Eder.
 - Observação da investigação: na hora da conferência havia 6 pedidos do
   dia com impressão `pending` (R$ 378) e só 2 `printed` — se o agente
   de impressão estava desligado/fora do ar, o "Faturado (impressos)"

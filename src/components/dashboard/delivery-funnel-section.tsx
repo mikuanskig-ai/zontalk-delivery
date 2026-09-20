@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { MetricCard } from './metric-card'
 import { SkeletonCard } from './skeleton'
 import { EmptyState } from './empty-state'
+import { FunnelStack } from './funnel-stack'
 
 // "Todo o período" (range === null) resolves to this — treated as
 // "since the account's creation" rather than blocked.
@@ -117,24 +118,31 @@ export function DeliveryFunnelSection({ range }: { range: OrderDateRange | null 
               subtitle={t('printedCount', { printed: summary.printedCount, total: summary.ordersCount })}
             />
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard title={t('newContacts')} value={data.newContacts.toLocaleString()} icon={Users} />
-            <MetricCard
-              title={t('orderingCustomers')}
-              value={data.orderingCustomers.toLocaleString()}
-              icon={ShoppingBag}
-            />
-            <MetricCard
-              title={t('returningCustomers')}
-              value={data.returningCustomers.toLocaleString()}
-              icon={Repeat2}
-              subtitle={pctLabel(data.returningCustomers, data.orderingCustomers, t('ofOrderingCustomers'))}
-            />
-            <MetricCard
-              title={t('loyalCustomers')}
-              value={data.loyalCustomers.toLocaleString()}
-              icon={Heart}
-              subtitle={pctLabel(data.loyalCustomers, data.orderingCustomers, t('ofOrderingCustomers'))}
+          <div className="rounded-xl border border-border bg-card p-5">
+            <FunnelStack
+              stages={[
+                { key: 'new', label: t('newContacts'), value: data.newContacts.toLocaleString(), icon: Users },
+                {
+                  key: 'ordering',
+                  label: t('orderingCustomers'),
+                  value: data.orderingCustomers.toLocaleString(),
+                  icon: ShoppingBag,
+                },
+                {
+                  key: 'returning',
+                  label: t('returningCustomers'),
+                  value: data.returningCustomers.toLocaleString(),
+                  hint: pctLabel(data.returningCustomers, data.orderingCustomers, t('ofOrderingCustomers')),
+                  icon: Repeat2,
+                },
+                {
+                  key: 'loyal',
+                  label: t('loyalCustomers'),
+                  value: data.loyalCustomers.toLocaleString(),
+                  hint: pctLabel(data.loyalCustomers, data.orderingCustomers, t('ofOrderingCustomers')),
+                  icon: Heart,
+                },
+              ]}
             />
           </div>
           {data.unattributedOrders > 0 && (
