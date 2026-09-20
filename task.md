@@ -130,6 +130,18 @@
 
 ## Feitas
 
+### 2026-09-20 — IA vazava chamada de função como texto pro cliente (v0.30.1)
+
+- Cliente da Concórdia recebeu "```commentary to=functions.update_order_info
+  ... once with {...}" às 12:39 (bairro Periollo, cálculo de frete). Única
+  ocorrência no histórico da conta. Modelo: openai/gpt-5.4 via OpenRouter.
+- Causa: formato "harmony" do modelo escrito como texto; a guarda
+  `looksLikeLeakedToolCall` só conhecia 2 formatos. Corrigido: 3º
+  formato + 1 retentativa no provider OpenAI-compatível antes do
+  handoff. 5 testes novos.
+- Não confirmado: por que o modelo vazou (sampling pontual é a hipótese);
+  se voltar a acontecer com frequência, vale trocar de modelo.
+
 ### 2026-09-20 — Inbox: fechar conversas em massa (v0.30.0)
 
 - Pedido do Eder: opção pra fechar em massa as conversas das abas

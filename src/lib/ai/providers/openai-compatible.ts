@@ -2,6 +2,7 @@ import { AiError, type ChatMessage, type ProviderResult } from '../types'
 import { MAX_OUTPUT_TOKENS } from '../defaults'
 import {
   guardAgainstLeakedToolCall,
+  looksLikeLeakedToolCall,
   mergeConsecutive,
   normalizeUsage,
   providerHttpError,
@@ -221,6 +222,13 @@ export function createOpenAiCompatibleProvider(opts: OpenAiCompatibleOptions) {
 
       const text = message?.content
       if (text && typeof text === 'string' && text.trim()) {
+        // A leaked call is usually a one-off sampling glitch — retry the
+        // same turn once (like the empty-completion case below) before
+        // the guard hands the ticket to a human.
+        if (attempt === 0 && looksLikeLeakedToolCall(text)) {
+          console.warn(`[ai ${label}] leaked tool call as text mid tool-loop, retrying once before handing off`)
+          continue
+        }
         guardAgainstLeakedToolCall(label, text)
         return { kind: 'text', text, usage }
       }

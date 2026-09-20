@@ -151,4 +151,51 @@ describe('OpenRouter — shares the OpenAI-compatible wire format at its own bas
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(result).toMatchObject({ kind: 'text', text: 'Sure, one moment.' })
   })
+  it('retries once when the model leaks a harmony tool call as text, and returns the recovered turn (2026-09-20)', async () => {
+    const leaked =
+      '```commentary to=functions.update_order_info once with {"neighborhood":"Periollo"}'
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(okResponse({ choices: [{ message: { content: leaked } }] }))
+      .mockResolvedValueOnce(
+        okResponse({
+          choices: [
+            {
+              message: {
+                content: null,
+                tool_calls: [
+                  { id: 'c1', function: { name: 'update_order_info', arguments: '{"neighborhood":"Periollo"}' } },
+                ],
+              },
+            },
+          ],
+        }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    const result = await callOpenRouterTurn({
+      apiKey: 'sk-or-test',
+      model: 'openai/gpt-5.4',
+      nativeMessages: seedOpenRouterMessages('sys', []),
+      tools,
+      timeoutMs: 1000,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result).toMatchObject({ kind: 'tool_calls' })
+  })
+
+  it('hands off (malformed_tool_call) if the retry leaks again, never returning the raw text', async () => {
+    const leaked = 'to=functions.view_cart once with {}'
+    const fetchMock = vi.fn().mockResolvedValue(okResponse({ choices: [{ message: { content: leaked } }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(
+      callOpenRouterTurn({
+        apiKey: 'sk-or-test',
+        model: 'openai/gpt-5.4',
+        nativeMessages: seedOpenRouterMessages('sys', []),
+        tools,
+        timeoutMs: 1000,
+      }),
+    ).rejects.toMatchObject({ code: 'malformed_tool_call' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
 })

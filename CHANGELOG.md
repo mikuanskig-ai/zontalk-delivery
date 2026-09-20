@@ -2,6 +2,24 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.30.1] — 2026-09-20
+
+### Corrigido
+
+- **IA mandava pro cliente o texto cru de uma chamada de função**
+  (ex.: "```commentary to=functions.update_order_info ... once with
+  {...}", visto ao vivo em 20/09 com openai/gpt-5.4 via OpenRouter). É a
+  sintaxe interna "harmony" do modelo escrita como texto em vez de uma
+  chamada de função de verdade. A proteção que já existia só reconhecia
+  dois formatos (JSON com name/parameters e `function=nome {...}`);
+  agora reconhece também `to=functions.nome`. Além disso, no provider
+  OpenAI-compatível (OpenRouter/OpenAI/Groq) a IA tenta a mesma rodada
+  mais uma vez antes de passar o atendimento pra um humano — quase
+  sempre é um deslize de amostragem pontual, e assim o pedido segue sem
+  o cliente perceber. Se vazar de novo na segunda tentativa, o
+  comportamento é o de antes: nada é enviado ao cliente e um humano
+  assume.
+
 ## [0.30.0] — 2026-09-20
 
 ### Adicionado

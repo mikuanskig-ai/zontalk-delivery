@@ -55,6 +55,22 @@ describe('looksLikeLeakedToolCall', () => {
     expect(looksLikeLeakedToolCall('Essa função de busca do site está ótima, obrigado pela pergunta!')).toBe(false)
   })
 
+  it('flags the harmony "to=functions.name ... once with {args}" shape (observed live 2026-09-20, gpt-5.4 via OpenRouter)', () => {
+    expect(
+      looksLikeLeakedToolCall(
+        '```commentary to=functions.update_order_info เดิมพันฟรี once with {"neighborhood":"Periollo"}റിക്ഷണം to=functions.calculate_delivery_fee тәшки once with {"address":"Rua Maracanã 177","neighborhood":"Periollo"}',
+      ),
+    ).toBe(true)
+  })
+
+  it('flags a bare "to=functions.name" even without args', () => {
+    expect(looksLikeLeakedToolCall('Um instante. to=functions.view_cart')).toBe(true)
+  })
+
+  it('does not flag ordinary text mentioning "to" or "functions"', () => {
+    expect(looksLikeLeakedToolCall('Vou ir to the store, functions de busca ok')).toBe(false)
+  })
+
   it('does not flag invalid JSON', () => {
     expect(looksLikeLeakedToolCall('{"name": "add_to_cart", "parameters": {')).toBe(false)
   })

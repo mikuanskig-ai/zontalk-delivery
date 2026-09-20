@@ -120,6 +120,14 @@ export async function providerHttpError(
  *  `{"name":...}` shape below. */
 const FUNCTION_EQUALS_PATTERN = /function\s*=\s*[A-Za-z_][\w.]*\s*\{/
 
+/** Matches the "harmony" channel syntax some OpenAI-family models leak as
+ *  plain text: `to=functions.update_order_info ... once with {...}`
+ *  (observed live 2026-09-20, openai/gpt-5.4 via OpenRouter — the call
+ *  is often wrapped in a ```commentary fence and mixed with stray
+ *  foreign-script tokens). Has no "name"/"parameters" keys, so the JSON
+ *  shape check below can't see it. */
+const HARMONY_CALL_PATTERN = /\bto\s*=\s*functions\.[A-Za-z_]\w*/
+
 function outermostJsonObject(text: string): unknown {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
@@ -140,6 +148,8 @@ function outermostJsonObject(text: string): unknown {
  *      style call object as the message content.
  *   2. `function=search_menu {"query": "marmitas"}` — a "function="
  *      prefix followed by the raw args object.
+ * A third shape, `to=functions.tool_name ... once with {args}` (harmony
+ * channel syntax), is matched by HARMONY_CALL_PATTERN alone.
  * Neither is caught by the normal tool_calls/tool_use parsing (that
  * field is simply absent on these turns), so without this check the
  * text would be sent to the customer verbatim. Deliberately narrow —
@@ -148,6 +158,8 @@ function outermostJsonObject(text: string): unknown {
  */
 export function looksLikeLeakedToolCall(text: string): boolean {
   const trimmed = text.trim()
+
+  if (HARMONY_CALL_PATTERN.test(trimmed)) return true
 
   if (FUNCTION_EQUALS_PATTERN.test(trimmed)) {
     const args = outermostJsonObject(trimmed)
