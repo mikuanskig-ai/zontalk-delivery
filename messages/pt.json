@@ -539,7 +539,13 @@
       "clearAll": "Limpar tudo",
       "noConversations": "Nenhuma conversa encontrada",
       "noMessagesYet": "Nenhuma mensagem ainda",
-      "unknown": "Desconhecido"
+      "unknown": "Desconhecido",
+      "bulkCloseButton": "Fechar todas ({count})",
+      "bulkCloseTitle": "Fechar {count} {count, plural, =1 {conversa} other {conversas}}?",
+      "bulkCloseDesc": "Todas as conversas listadas nesta aba (respeitando busca e filtros) serão movidas para Fechados. Você pode reabri-las depois.",
+      "bulkCloseConfirm": "Fechar {count}",
+      "bulkCloseSuccess": "{count} {count, plural, =1 {conversa fechada} other {conversas fechadas}}.",
+      "bulkCloseFailed": "Falha ao fechar as conversas."
     },
     "messageThread": {
       "backToConversations": "Voltar para conversas",

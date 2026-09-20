@@ -389,6 +389,15 @@ function InboxPageInner() {
     setResyncToken((n) => n + 1);
   }, []);
 
+  // "Fechar todas" — mirror what the server just closed so the tabs
+  // update immediately (realtime would also catch up, per row).
+  const handleBulkClosed = useCallback((ids: string[]) => {
+    const closed = new Set(ids);
+    setConversations((prev) =>
+      prev.map((c) => (closed.has(c.id) ? { ...c, status: "closed" as const } : c)),
+    );
+  }, []);
+
   const handleConversationsLoaded = useCallback(
     (loaded: Conversation[]) => {
       setConversations(loaded);
@@ -600,6 +609,7 @@ function InboxPageInner() {
             conversations={conversations}
             onConversationsLoaded={handleConversationsLoaded}
             resyncToken={resyncToken}
+            onBulkClosed={handleBulkClosed}
           />
         </div>
 

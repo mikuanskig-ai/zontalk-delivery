@@ -2,6 +2,20 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.30.0] — 2026-09-20
+
+### Adicionado
+
+- **Fechar conversas em massa no Inbox** — nas abas Abertos, Pendentes e
+  Chatbot aparece o botão "Fechar todas (N)". Fecha exatamente o que está
+  listado na aba naquele momento (respeitando busca, "não lidas", tags e
+  empresa — filtrar antes reduz o que será fechado), com confirmação
+  mostrando a quantidade. Some na aba Fechados e para quem não pode
+  enviar mensagens. Nova rota `POST /api/conversations/bulk-close`
+  (agent+): mesmos carimbos do fechar individual (status, closed_at,
+  closed_by; `close_reason = 'bulk_close'`), no máximo 1000 por chamada em
+  lotes de 200, ignora conversas já fechadas e de outras contas.
+
 ## [0.29.1] — 2026-09-20
 
 ### Alterado

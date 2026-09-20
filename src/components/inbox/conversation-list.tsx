@@ -10,10 +10,13 @@ import {
 } from "@/lib/inbox/conversations";
 import { cn } from "@/lib/utils";
 import type { Conversation, ConversationStatus, Tag } from "@/types";
-import { Search, ChevronDown, X, Clock, CircleDot, CheckCircle2, Sparkles } from "lucide-react";
+import { Search, ChevronDown, X, Clock, CircleDot, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-can";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { fetchAiAccountStatus } from "@/lib/inbox/ai-account-status";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,6 +40,8 @@ interface ConversationListProps {
    * or the tab was throttled. Optional so existing callers keep working.
    */
   resyncToken?: number;
+  /** Called with the ids the server actually closed ("Fechar todas"). */
+  onBulkClosed?: (ids: string[]) => void;
 }
 
 const STATUS_COLORS: Record<ConversationStatus, string> = {
@@ -74,9 +79,13 @@ export function ConversationList({
   conversations,
   onConversationsLoaded,
   resyncToken = 0,
+  onBulkClosed,
 }: ConversationListProps) {
   const t = useTranslations("Inbox.conversationList");
   const { accountId } = useAuth();
+  const canAct = useCan("send-messages");
+  const { confirm, dialog } = useConfirmDialog();
+  const [bulkClosing, setBulkClosing] = useState(false);
 
   // Top row = tickets the AI is still allowed to touch (PENDENTE +
   // CHATBOT); bottom row = human-only (ABERTO — an agent owns it, the
@@ -241,6 +250,42 @@ export function ConversationList({
     return result;
   }, [conversations, activeBucket, unreadOnly, autoReplyOn, search, selectedTagIds, selectedCompany]);
 
+  const handleBulkClose = useCallback(async () => {
+    // Acts on exactly what the agent sees: the active tab AFTER search /
+    // unread / tag / company filters — so filtering first narrows it.
+    const ids = filtered.map((c) => c.id);
+    if (ids.length === 0) return;
+    const ok = await confirm({
+      title: t("bulkCloseTitle", { count: ids.length }),
+      description: t("bulkCloseDesc"),
+      confirmLabel: t("bulkCloseConfirm", { count: ids.length }),
+      destructive: true,
+    });
+    if (!ok) return;
+
+    setBulkClosing(true);
+    try {
+      const res = await fetch("/api/conversations/bulk-close", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_ids: ids }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (Array.isArray(data.closed_ids) && data.closed_ids.length > 0) {
+        onBulkClosed?.(data.closed_ids);
+      }
+      if (!res.ok) {
+        toast.error(data.error ?? t("bulkCloseFailed"));
+        return;
+      }
+      toast.success(t("bulkCloseSuccess", { count: data.closed ?? 0 }));
+    } catch {
+      toast.error(t("bulkCloseFailed"));
+    } finally {
+      setBulkClosing(false);
+    }
+  }, [filtered, confirm, t, onBulkClosed]);
+
   const toggleTag = useCallback((id: string) => {
     setSelectedTagIds((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
@@ -287,6 +332,7 @@ export function ConversationList({
     // the single pane showing; fixed 320px on desktop where it shares the
     // row with the thread + contact sidebar.
     <div className="flex h-full w-full flex-col border-r border-border bg-card lg:w-80">
+      {dialog}
       {/* Search + Filter */}
       <div className="space-y-2 border-b border-border p-3">
         <div className="relative">
@@ -353,6 +399,18 @@ export function ConversationList({
             </button>
           ))}
         </div>
+
+        {canAct && activeBucket !== "closed" && filtered.length > 0 && (
+          <button
+            type="button"
+            onClick={handleBulkClose}
+            disabled={bulkClosing}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/30 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:opacity-60"
+          >
+            {bulkClosing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+            {t("bulkCloseButton", { count: filtered.length })}
+          </button>
+        )}
 
         <div className="flex flex-wrap items-center gap-1">
           <button

@@ -539,7 +539,13 @@
       "clearAll": "Clear all",
       "noConversations": "No conversations found",
       "noMessagesYet": "No messages yet",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "bulkCloseButton": "Close all ({count})",
+      "bulkCloseTitle": "Close {count} {count, plural, =1 {conversation} other {conversations}}?",
+      "bulkCloseDesc": "Every conversation listed in this tab (respecting search and filters) will be moved to Closed. You can reopen them later.",
+      "bulkCloseConfirm": "Close {count}",
+      "bulkCloseSuccess": "{count} {count, plural, =1 {conversation closed} other {conversations closed}}.",
+      "bulkCloseFailed": "Failed to close the conversations."
     },
     "messageThread": {
       "backToConversations": "Back to conversations",

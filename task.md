@@ -130,6 +130,19 @@
 
 ## Feitas
 
+### 2026-09-20 — Inbox: fechar conversas em massa (v0.30.0)
+
+- Pedido do Eder: opção pra fechar em massa as conversas das abas
+  Abertos/Pendentes/Chatbot. Botão "Fechar todas (N)" + rota
+  `bulk-close`. 9 testes novos.
+- Achado na investigação: o Eder descreveu que "a IA conclui o pedido,
+  espera 5 min e fecha o chat", mas isso NÃO existe hoje — nenhuma
+  conversa da Concórdia foi fechada nos últimos 2 dias, a conta não tem
+  automação nenhuma e o código só fecha por ação manual ou pela ação
+  `close_conversation` do construtor de automações. Por isso as
+  conversas se acumulam nas abas abertas. Proposta pendente de decisão
+  dele: fechar sozinho X min depois do pedido confirmado pela IA.
+
 ### 2026-09-20 — Painel: filtro de período, cards de pedidos/faturado, funil corrigido
 
 - Pedido do Eder: filtro de datas no topo do Painel, funil de Delivery
