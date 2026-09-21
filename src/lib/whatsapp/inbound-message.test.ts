@@ -29,7 +29,7 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }))
 
-import { isValidStatusTransition, shouldDispatchAiReply, captureCtwaAttribution } from './inbound-message'
+import { isValidStatusTransition, shouldDispatchAiReply, captureCtwaAttribution, reopenPatch } from './inbound-message'
 
 describe('isValidStatusTransition', () => {
   it('allows forward moves along the ladder', () => {
@@ -109,5 +109,30 @@ describe('captureCtwaAttribution — Meta CAPI (2026-09-18)', () => {
   it('never throws when the write fails — must never break inbound message ingestion', async () => {
     h.error = { message: 'boom' }
     await expect(captureCtwaAttribution('acct-1', 'contact-1', 'clid-123')).resolves.toBeUndefined()
+  })
+})
+
+describe('reopenPatch — closed ticket resurfacing (2026-09-21)', () => {
+  const NOW = '2026-09-21T15:00:00.000Z'
+
+  it('with AI auto-reply on, hands the thread back to the bot (unassign, unpause, fresh reply budget)', () => {
+    expect(reopenPatch(true, NOW)).toEqual({
+      status: 'pending',
+      closed_at: null,
+      closed_by: null,
+      close_reason: null,
+      updated_at: NOW,
+      assigned_agent_id: null,
+      ai_autoreply_disabled: false,
+      ai_reply_count: 0,
+      ai_handoff_summary: null,
+    })
+  })
+
+  it('with the AI off, only reopens — the previous handler stays assigned', () => {
+    const patch = reopenPatch(false, NOW)
+    expect(patch).toEqual({ status: 'pending', closed_at: null, closed_by: null, close_reason: null, updated_at: NOW })
+    expect(patch).not.toHaveProperty('assigned_agent_id')
+    expect(patch).not.toHaveProperty('ai_autoreply_disabled')
   })
 })

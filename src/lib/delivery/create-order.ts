@@ -19,6 +19,7 @@ import { formatCurrency } from '@/lib/currency';
 import { enqueuePrintJob } from '@/lib/delivery/print-queue';
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events';
 import { dispatchMetaCapiConversion } from '@/lib/integrations/meta-capi/dispatch-conversion';
+import { syncOrderCreatedToCrm } from '@/lib/delivery/order-crm-sync';
 
 export interface CartLineItemAddon {
   group_id: string;
@@ -353,6 +354,12 @@ export async function finalizeDeliveryOrder(
     total: order.total,
     currency: order.currency,
   });
+
+  // CRM bookkeeping (2026-09-21): win the funnel deal and refresh the
+  // contact's purchase totals (Total gasto / Pedidos / Último pedido /
+  // Ticket médio) so the manager can export a ready-made audience.
+  // Best-effort, never throws — see order-crm-sync.ts.
+  await syncOrderCreatedToCrm(db, args.accountId, order);
 
   return order;
 }

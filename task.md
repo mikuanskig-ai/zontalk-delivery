@@ -130,6 +130,24 @@
 
 ## Feitas
 
+### 2026-09-21 — IA move o lead no funil + valor do cliente + reengajar fechados (v0.33.0)
+
+- Pedido do Eder: IA com autonomia no Kanban (funil) quando o lead pede/paga;
+  continuar atendendo cliente que já foi de humano e foi pra Fechados;
+  registrar o valor no contato pra exportar como público do Meta Ads.
+- Feito: ver CHANGELOG 0.33.0. Migration 083 (backfill) aplicada em produção;
+  195 contatos preenchidos, soma confere com os pedidos (R$ 10.397,90).
+- Interpretação (confirmar com o Eder): "Kanban" = funil de vendas (deals).
+  O Kanban de Operação do Delivery (confirmado → em produção → pronto →
+  saiu → entregue) NÃO é movido pela IA — é fluxo de cozinha/entrega, feito
+  pela equipe. "Registrar o preço no contato" = Total gasto/Pedidos/Último
+  pedido/Ticket médio (valor do cliente, LTV).
+- Não feito / a decidir: (a) negócios de pedidos ANTIGOS não foram criados
+  no funil (só os novos); (b) o limite de 15 respostas da IA por conversa
+  continua valendo para chats que nunca fecharam (30 chats pendentes já
+  estão no limite) — só o reabrir-de-fechados zera; (c) "pago": o negócio
+  vira ganho quando o pedido é criado, não quando o pagamento é confirmado.
+
 ### 2026-09-21 — IA agora responde "onde fica?" com endereço real + mapa (v0.32.0)
 
 - Cliente de anúncio da Concórdia (10:43) perguntou "Onde fica" e a IA

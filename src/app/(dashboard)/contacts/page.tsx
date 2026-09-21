@@ -268,6 +268,24 @@ export default function ContactsPage() {
         tagIdsByContact[ct.contact_id].push(ct.tag_id);
       });
 
+      // Custom fields go out as extra columns — that is where the
+      // per-contact purchase totals live (Total gasto / Pedidos / Último
+      // pedido / Ticket médio, kept by the AI-order flow), so the export
+      // is directly usable as a Meta Ads audience / LTV list. Chunked
+      // to keep each request URL short.
+      const { data: fieldDefs } = await supabase.from('custom_fields').select('id, field_name').order('created_at');
+      const fields = (fieldDefs ?? []) as { id: string; field_name: string }[];
+      const valueByContactField = new Map<string, string>();
+      if (fields.length > 0) {
+        for (let i = 0; i < contactIds.length; i += 200) {
+          const { data: vals } = await supabase
+            .from('contact_custom_values')
+            .select('contact_id, custom_field_id, value')
+            .in('contact_id', contactIds.slice(i, i + 200));
+          (vals ?? []).forEach((v) => valueByContactField.set(`${v.contact_id}:${v.custom_field_id}`, v.value ?? ''));
+        }
+      }
+
       const header = [
         t('tableColumns.name'),
         t('tableColumns.phone'),
@@ -275,6 +293,7 @@ export default function ContactsPage() {
         t('tableColumns.company'),
         t('tableColumns.tags'),
         t('tableColumns.createdAt'),
+        ...fields.map((f) => f.field_name),
       ];
       const csvRows = rows.map((c) => [
         c.name ?? '',
@@ -286,6 +305,7 @@ export default function ContactsPage() {
           .filter(Boolean)
           .join('; '),
         new Date(c.created_at).toLocaleDateString(),
+        ...fields.map((f) => valueByContactField.get(`${c.id}:${f.id}`) ?? ''),
       ]);
       downloadCsv(`contacts-${new Date().toISOString().slice(0, 10)}.csv`, toCsv([header, ...csvRows]));
     } catch {

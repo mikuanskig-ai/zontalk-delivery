@@ -4,6 +4,8 @@ import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
 import { notifyOrderCancellation } from '@/lib/delivery/print-queue';
+import { syncOrderCancelledToCrm } from '@/lib/delivery/order-crm-sync';
+import { supabaseAdmin } from '@/lib/flows/admin-client';
 import type { DeliveryOrderStatus, DeliveryPaymentStatus } from '@/types';
 
 const VALID_STATUSES: DeliveryOrderStatus[] = [
@@ -116,6 +118,10 @@ export async function PATCH(request: Request, { params }: Params) {
       // own doc (print-queue.ts).
       if (updated.status === 'cancelled') {
         await notifyOrderCancellation(accountId, updated.id);
+        // Service-role client on purpose: deals/custom fields are
+        // admin-writable under RLS, and an agent cancelling an order
+        // must still keep the contact's totals and funnel correct.
+        await syncOrderCancelledToCrm(supabaseAdmin(), accountId, updated);
       }
 
       await dispatchWebhookEvent(supabase, accountId, 'order.status_changed', {

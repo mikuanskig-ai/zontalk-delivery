@@ -2,6 +2,46 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.33.0] — 2026-09-21
+
+### Adicionado
+
+- **A IA agora move o lead no funil (Kanban de Funil) sozinha**, de forma
+  automática e determinística (disparada pelo próprio ciclo do pedido, não
+  depende de o modelo lembrar de chamar uma ferramenta):
+  - IA coloca item no carrinho → negócio aberto na **primeira etapa** do
+    funil ("Novo lead");
+  - pedido feito → o negócio vai para a **última etapa** ("Ganho"),
+    status ganho, com o **valor do pedido** (cliente que volta a pedir
+    ganha um negócio novo por pedido);
+  - pedido cancelado → o negócio vira perdido; carrinho abandonado (limpeza
+    de 6h) → negócio aberto vira perdido.
+  Usa o primeiro funil da conta e a primeira/última etapa por posição, então
+  funciona com os nomes de etapa que a conta tiver. Só mexe em negócios
+  criados pela própria IA (marca `auto:delivery` nas notas) — nunca em
+  negócio criado ou editado à mão.
+- **Valor do cliente registrado no contato, automaticamente**: campos
+  "Total gasto", "Pedidos", "Último pedido" e "Ticket médio" (campos
+  personalizados, aparecem no painel do contato) recalculados a cada pedido
+  criado ou cancelado — sempre recalculados a partir dos pedidos, nunca
+  somados, então não desviam. A exportação CSV de contatos agora inclui os
+  campos personalizados como colunas, e o "Total gasto" serve como coluna de
+  valor (LTV) para público personalizado/semelhante no Meta Ads.
+  Migration 083 preencheu quem já tinha comprado (195 contatos; a soma
+  bate com os pedidos).
+
+### Corrigido
+
+- **Cliente que volta depois de "Fechados" agora é atendido pela IA
+  novamente.** Ao reabrir um chat fechado por nova mensagem, a conversa
+  voltava para Pendentes mas mantinha o atendente antigo atribuído e a
+  pausa da IA — as duas coisas silenciam a IA de vez (em 21/09, 325 de 336
+  chats fechados da Concórdia estavam com a IA pausada e 18 com atendente).
+  Agora, com a IA ligada na conta, a reabertura devolve a conversa ao bot
+  (tira o atendente, tira a pausa, zera o contador de respostas), igual ao
+  "Retomar IA" manual. Com a IA desligada, a atribuição é mantida como
+  antes.
+
 ## [0.32.0] — 2026-09-21
 
 ### Corrigido

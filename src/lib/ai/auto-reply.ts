@@ -17,6 +17,7 @@ import { formatCurrency } from '@/lib/currency'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { sleep } from './debounce'
 import { getBusinessLocation } from '@/lib/ai/business-location'
+import { ensureLeadDealForCart } from '@/lib/delivery/lead-funnel'
 import { getAiBusinessHours, getDailyMenu, isWithinBusinessHours, resolveDayKey } from '@/lib/delivery/business-hours'
 import { getPixKey } from '@/lib/payments/config'
 import type { AiUsage } from './types'
@@ -327,6 +328,21 @@ export async function dispatchInboundToAiReply(
         handoff = result.handoff
         usage = result.usage
         placedOrder = result.placedOrder
+
+        // Funnel (2026-09-21): a lead with something in the cart is an
+        // open deal in the first stage; placing the order (create-order)
+        // wins it. Best-effort and only when nothing was placed this turn.
+        if (!result.placedOrder && contactId && (await hasCartItems(db, conversationId))) {
+          const { data: leadContact } = await db.from('contacts').select('name').eq('id', contactId).maybeSingle()
+          await ensureLeadDealForCart({
+            db,
+            accountId,
+            contactId,
+            conversationId,
+            contactName: (leadContact as { name: string | null } | null)?.name ?? null,
+            currency,
+          })
+        }
 
         // See ORDER_SUMMARY_WITH_PRICE_PATTERN / ORDER_COMPLETION_CLAIM_PATTERN's
         // docs above — a real order was already turned into the

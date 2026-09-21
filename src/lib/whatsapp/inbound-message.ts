@@ -397,6 +397,40 @@ async function findOrCreateContact(
   return { contact: newContact, wasCreated: true }
 }
 
+/**
+ * Columns written when a closed ticket resurfaces because the customer
+ * wrote again. With the account's AI auto-reply ON the thread is also
+ * handed back to the bot (Eder, 2026-09-21: a customer a human already
+ * served — then closed — who comes back asking for a marmita must get
+ * the AI again). Before this, the reopen left the previous handler
+ * assigned and the pause flag set, which mute the bot for good: on
+ * 2026-09-21, 325 of 336 closed Concórdia tickets were AI-paused and 18
+ * still had a human assigned. Same reset the manual "Retomar IA" does.
+ * With the AI off the assignment is kept — human-only accounts rely on
+ * it to route a returning customer to whoever served them.
+ */
+export function reopenPatch(aiAutoReplyOn: boolean, nowIso: string): Record<string, unknown> {
+  const base = {
+    status: 'pending',
+    closed_at: null,
+    closed_by: null,
+    close_reason: null,
+    updated_at: nowIso,
+  }
+  return aiAutoReplyOn
+    ? { ...base, assigned_agent_id: null, ai_autoreply_disabled: false, ai_reply_count: 0, ai_handoff_summary: null }
+    : base
+}
+
+async function isAiAutoReplyOn(accountId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin()
+    .from('ai_configs')
+    .select('is_active, auto_reply_enabled')
+    .eq('account_id', accountId)
+    .maybeSingle()
+  return !!(data?.is_active && data?.auto_reply_enabled)
+}
+
 async function findOrCreateConversation(
   accountId: string,
   configOwnerUserId: string,
@@ -425,15 +459,10 @@ async function findOrCreateConversation(
     // "every new/reopened conversation starts unattended" invariant as
     // the CREATE branch below, just applied to the reuse path.
     if (existing.status === 'closed') {
+      const patch = reopenPatch(await isAiAutoReplyOn(accountId), new Date().toISOString())
       const { data: reopened, error: reopenError } = await supabaseAdmin()
         .from('conversations')
-        .update({
-          status: 'pending',
-          closed_at: null,
-          closed_by: null,
-          close_reason: null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(patch)
         .eq('id', existing.id)
         .select()
         .single()
@@ -448,7 +477,7 @@ async function findOrCreateConversation(
           reopenError
         )
         return {
-          conversation: { ...existing, status: 'pending', closed_at: null, closed_by: null, close_reason: null },
+          conversation: { ...existing, ...patch },
           created: false,
         }
       }

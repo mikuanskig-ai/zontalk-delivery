@@ -1,3 +1,4 @@
+import { markOpenLeadDealLost } from '@/lib/delivery/lead-funnel'
 import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/delivery/admin-client'
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
   // something actually sitting in the cart.
   const { data: rows, error } = await admin
     .from('conversations')
-    .select('id, account_id, ai_cart')
+    .select('id, account_id, contact_id, ai_cart')
     .neq('ai_cart', '[]')
 
   if (error) {
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
   }
   if (!rows?.length) return NextResponse.json({ swept: 0 })
 
-  type Row = { id: string; account_id: string; ai_cart: unknown }
+  type Row = { id: string; account_id: string; contact_id: string | null; ai_cart: unknown }
 
   let swept = 0
   for (const row of rows as Row[]) {
@@ -96,6 +97,9 @@ export async function GET(request: Request) {
     console.warn(
       `[delivery-cart-sweep] cleared an abandoned cart — conversation ${row.id}, account ${row.account_id}, ${cart.length} line(s)`,
     )
+    // The lead who left a cart behind is a lost deal, not one that
+    // sits open in the first funnel stage forever.
+    if (row.contact_id) await markOpenLeadDealLost(admin, row.account_id, row.contact_id)
     swept += 1
   }
 

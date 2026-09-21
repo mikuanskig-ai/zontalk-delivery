@@ -22,6 +22,9 @@ vi.mock("@/lib/contacts/tag-events", () => ({
 vi.mock("@/lib/integrations/meta-capi/dispatch-conversion", () => ({
   dispatchMetaCapiConversion: vi.fn(async () => {}),
 }));
+vi.mock("@/lib/delivery/order-crm-sync", () => ({
+  syncOrderCreatedToCrm: vi.fn(async () => {}),
+}));
 
 import {
   computeCartTotal,
@@ -38,6 +41,7 @@ import { addContactTagAndDispatch } from "@/lib/contacts/tag-events";
 import { dispatchWebhookEvent } from "@/lib/webhooks/deliver";
 import { runAutomationsForTrigger } from "@/lib/automations/engine";
 import { dispatchMetaCapiConversion } from "@/lib/integrations/meta-capi/dispatch-conversion";
+import { syncOrderCreatedToCrm } from "@/lib/delivery/order-crm-sync";
 
 function line(overrides: Partial<CartLineItem> = {}): CartLineItem {
   return {
@@ -514,6 +518,7 @@ describe("finalizeDeliveryOrder — skipSideEffects (print simulator, 2026-09-07
     expect(dispatchWebhookEvent).not.toHaveBeenCalled();
     expect(runAutomationsForTrigger).not.toHaveBeenCalled();
     expect(dispatchMetaCapiConversion).not.toHaveBeenCalled();
+    expect(syncOrderCreatedToCrm).not.toHaveBeenCalled();
   });
 
   it("stores a synthetic item's empty product_id as null, not an empty string (FK is nullable, not string-tolerant)", async () => {
@@ -560,6 +565,8 @@ describe("finalizeDeliveryOrder — skipSideEffects (print simulator, 2026-09-07
     expect(dispatchWebhookEvent).toHaveBeenCalledTimes(1);
     expect(runAutomationsForTrigger).toHaveBeenCalledTimes(1);
     expect(dispatchMetaCapiConversion).toHaveBeenCalledTimes(1);
+    // 2026-09-21: real orders also win the funnel deal + refresh the contact's purchase totals.
+    expect(syncOrderCreatedToCrm).toHaveBeenCalledTimes(1);
   });
 });
 
