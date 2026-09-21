@@ -141,6 +141,8 @@
     },
     "dashboard": {
       "businessTitle": "Overview",
+      "refreshButton": "Refresh",
+      "updatedAt": "Updated at {time}",
       "serverTitle": "Server status",
       "loadFailed": "Failed to load.",
       "retry": "Retry",

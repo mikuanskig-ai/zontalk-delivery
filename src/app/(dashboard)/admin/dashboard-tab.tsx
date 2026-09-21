@@ -20,6 +20,7 @@ import {
   HardDrive,
   Server,
   RotateCw,
+  RefreshCw,
   Loader2,
 } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/metric-card";
@@ -49,6 +50,11 @@ interface ServerStatus {
   wuzapi: { reachable: boolean; totalSessions: number; connectedSessions: number } | null;
 }
 
+// Server health is cheap and changes second to second; business
+// counters are heavier queries and change slowly.
+const SERVER_REFRESH_MS = 10_000;
+const STATS_REFRESH_MS = 30_000;
+
 const GB = 1024 * 1024 * 1024;
 
 function formatGb(bytes: number): string {
@@ -74,31 +80,82 @@ export function AdminDashboardTab() {
   const [statsError, setStatsError] = useState(false);
   const [server, setServer] = useState<ServerStatus | null>(null);
   const [serverError, setServerError] = useState(false);
+  const [serverUpdatedAt, setServerUpdatedAt] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const { confirm, dialog } = useConfirmDialog();
 
-  const loadStats = useCallback(() => {
-    setStatsError(false);
-    setStats(null);
-    fetch("/api/admin/stats")
+  // `silent` = background refresh: keep showing the last good numbers
+  // (no skeleton flash) and never replace them with an error card — a
+  // single failed poll (or the backend restarting on purpose) should
+  // not blank the panel; the next tick just tries again.
+  const loadStats = useCallback((silent = false) => {
+    if (!silent) {
+      setStatsError(false);
+      setStats(null);
+    }
+    return fetch("/api/admin/stats", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setStats(data as AdminStats))
-      .catch(() => setStatsError(true));
+      .then((data) => {
+        setStats(data as AdminStats);
+        setStatsError(false);
+      })
+      .catch(() => {
+        if (!silent) setStatsError(true);
+      });
   }, []);
 
-  const loadServer = useCallback(() => {
-    setServerError(false);
-    setServer(null);
-    fetch("/api/admin/server-status")
+  const loadServer = useCallback((silent = false) => {
+    if (!silent) {
+      setServerError(false);
+      setServer(null);
+    }
+    return fetch("/api/admin/server-status", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setServer(data as ServerStatus))
-      .catch(() => setServerError(true));
+      .then((data) => {
+        setServer(data as ServerStatus);
+        setServerError(false);
+        setServerUpdatedAt(new Date());
+      })
+      .catch(() => {
+        if (!silent) setServerError(true);
+      });
   }, []);
 
   useEffect(() => {
     loadStats();
     loadServer();
   }, [loadStats, loadServer]);
+
+  // Periodic refresh while the tab is visible, plus an immediate
+  // refresh when the admin comes back to a tab that sat in the
+  // background (browsers throttle timers there, so the numbers would
+  // otherwise be stale until the next tick).
+  useEffect(() => {
+    const tick = (fn: () => void) => () => {
+      if (document.visibilityState === "visible") fn();
+    };
+    const serverId = setInterval(tick(() => void loadServer(true)), SERVER_REFRESH_MS);
+    const statsId = setInterval(tick(() => void loadStats(true)), STATS_REFRESH_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void loadServer(true);
+        void loadStats(true);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(serverId);
+      clearInterval(statsId);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [loadServer, loadStats]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([loadServer(true), loadStats(true)]);
+    setRefreshing(false);
+  };
 
   const handleRestart = async () => {
     const ok = await confirm({
@@ -136,7 +193,7 @@ export function AdminDashboardTab() {
           <EmptyState
             title={t("loadFailed")}
             action={
-              <Button size="sm" variant="outline" onClick={loadStats}>
+              <Button size="sm" variant="outline" onClick={() => void loadStats()}>
                 {t("retry")}
               </Button>
             }
@@ -185,20 +242,26 @@ export function AdminDashboardTab() {
           <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
             {t("serverTitle")}
           </h2>
-          <Button size="sm" variant="destructive" onClick={handleRestart} disabled={restarting}>
-            {restarting ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <RotateCw className="mr-1.5 h-4 w-4" />
-            )}
-            {t("restartButton")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw className={`mr-1.5 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              {t("refreshButton")}
+            </Button>
+            <Button size="sm" variant="destructive" onClick={handleRestart} disabled={restarting}>
+              {restarting ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <RotateCw className="mr-1.5 h-4 w-4" />
+              )}
+              {t("restartButton")}
+            </Button>
+          </div>
         </div>
         {serverError ? (
           <EmptyState
             title={t("loadFailed")}
             action={
-              <Button size="sm" variant="outline" onClick={loadServer}>
+              <Button size="sm" variant="outline" onClick={() => void loadServer()}>
                 {t("retry")}
               </Button>
             }
@@ -266,6 +329,10 @@ export function AdminDashboardTab() {
                 platform: server.general.platform,
                 uptime: formatUptime(server.uptimeSeconds),
               })}
+              {serverUpdatedAt &&
+                ` · ${t("updatedAt", {
+                  time: serverUpdatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+                })}`}
             </p>
           </>
         )}

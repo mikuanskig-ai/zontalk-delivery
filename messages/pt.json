@@ -141,6 +141,8 @@
     },
     "dashboard": {
       "businessTitle": "Visão geral",
+      "refreshButton": "Atualizar",
+      "updatedAt": "Atualizado às {time}",
       "serverTitle": "Status do servidor",
       "loadFailed": "Falha ao carregar.",
       "retry": "Tentar de novo",

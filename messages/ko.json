@@ -141,6 +141,8 @@
     },
     "dashboard": {
       "businessTitle": "개요",
+      "refreshButton": "새로고침",
+      "updatedAt": "{time}에 업데이트됨",
       "serverTitle": "서버 상태",
       "loadFailed": "불러오지 못했습니다.",
       "retry": "다시 시도",

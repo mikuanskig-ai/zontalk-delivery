@@ -16,13 +16,19 @@ import { listSessions } from '@/lib/whatsapp/wuzapi-api'
  * to it.
  */
 
+// Always live — an admin polling this every few seconds must never be
+// served a cached snapshot.
+export const dynamic = 'force-dynamic'
+
 /** `os.cpus()` gives cumulative tick counts since boot, not a live
  *  percentage — the standard way to get a usage % is two snapshots a
- *  short interval apart and diff them. ~100ms is enough to be
- *  representative without meaningfully slowing this route down. */
+ *  short interval apart and diff them. 100ms was too jittery — a
+ *  single busy slice (a build, a cron burst) read as a flat 100% on a
+ *  2-core box — so sample over 500ms, still cheap for a route polled
+ *  every 10s. */
 async function getCpuUsagePercent(): Promise<number> {
   const start = os.cpus()
-  await new Promise((resolve) => setTimeout(resolve, 100))
+  await new Promise((resolve) => setTimeout(resolve, 500))
   const end = os.cpus()
 
   let idleDelta = 0

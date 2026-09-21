@@ -2,6 +2,26 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.31.2] — 2026-09-21
+
+### Alterado
+
+- **Admin → Dashboard: painel se atualiza sozinho.** "Status do servidor"
+  (CPU, memória, disco, WuzAPI, uptime) atualiza a cada 10s e os números
+  do negócio a cada 30s, só com a aba visível, e imediatamente ao voltar
+  para uma aba que ficou em segundo plano. A atualização é silenciosa
+  (mantém os últimos números, sem piscar em "carregando" e sem trocar por
+  erro se uma consulta falhar — importante também quando o backend é
+  reiniciado de propósito). Novo botão "Atualizar" e "Atualizado às
+  HH:MM:SS". Antes carregava uma única vez ao abrir a aba.
+
+### Corrigido
+
+- **CPU aparecia em 100% sem estar**: a amostra de 100ms pegava um pico
+  isolado (medido na VPS: 74% ocioso, load 0,89). Amostra agora de 500ms;
+  a rota `/api/admin/server-status` passou a ser explicitamente dinâmica
+  (nunca servida de cache).
+
 ## [0.31.1] — 2026-09-21
 
 ### Corrigido
