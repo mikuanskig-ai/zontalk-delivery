@@ -2770,6 +2770,27 @@
       "reindexTooltip": "Re-embed all documents (e.g. after adding an embeddings key)",
       "loading": "Loading…"
     },
+    "aiFollowup": {
+      "title": "Follow-up and automatic close",
+      "description": "Nudges customers who started an order and went quiet, and sends finished chats to Closed on its own. Everything is optional and starts off.",
+      "needsAi": "Set up and turn on the AI above before using follow-up.",
+      "followupToggle": "Unfinished-order reminder",
+      "followupToggleDesc": "If the customer put items in the cart and stopped replying, the AI sends a message to pick the order back up.",
+      "delayLabel": "Wait how many minutes",
+      "maxLabel": "How many reminders (1 to 3)",
+      "closeLabel": "Close after (min) without reply",
+      "timingHint": "Reminders only go out during the AI's service hours. \"Close after\" counts from the last reminder; 0 = never close on its own.",
+      "messageLabel": "Reminder message {n}",
+      "variablesHint": "Leave blank to use the suggested text (shown in grey). Use '{nome}' for the customer's first name and '{itens}' for what they ordered.",
+      "autoCloseToggle": "Close after the order",
+      "autoCloseToggleDesc": "Once the order is placed, waits for the customer to stop talking and sends the chat to Closed.",
+      "autoCloseLabel": "Minutes after the order (and after the customer's last message)",
+      "save": "Save",
+      "saving": "Saving...",
+      "saveSuccess": "Saved.",
+      "saveFailed": "Failed to save.",
+      "loadFailed": "Failed to load."
+    },
     "metaCapi": {
       "title": "Meta Ads (Click to WhatsApp)",
       "description": "Tells Meta when a WhatsApp order came from an ad click — closes the funnel and helps Meta optimize who sees the ad.",

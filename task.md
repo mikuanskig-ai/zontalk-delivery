@@ -130,6 +130,21 @@
 
 ## Feitas
 
+### 2026-09-21 — Follow-up de pedido não finalizado + encerramento automático (v0.34.0)
+
+- Pedido do Eder: lembrete para quem começou o pedido e sumiu (personalizável),
+  encerrar sozinho depois do pedido (10–20 min) e quando o cliente diz que já
+  pediu / não vai pedir.
+- Feito: ver CHANGELOG 0.34.0. Migration 084 aplicada em produção. Tudo
+  DESLIGADO por padrão; a config fica em Agentes de IA → Configuração.
+- Ativado na Concórdia: só o encerramento 20 min após o pedido. O follow-up de
+  pedido não finalizado ficou DESLIGADO até o Eder revisar/aprovar o texto e
+  os tempos (a IA passaria a mandar mensagem para clientes reais sozinha).
+- Não verificado ao vivo: nenhum lembrete real foi enviado nem chat fechado
+  pelo cron ainda (só testes automatizados e simulação de banco).
+- Ideia futura: lembrete gerado pela IA (em vez de texto fixo com {nome}/{itens})
+  e mensagem própria para "carrinho com endereço já informado".
+
 ### 2026-09-21 — IA move o lead no funil + valor do cliente + reengajar fechados (v0.33.0)
 
 - Pedido do Eder: IA com autonomia no Kanban (funil) quando o lead pede/paga;

@@ -43,6 +43,8 @@ import { readOrderInfo, writeOrderInfo, clearStaleFeeQuote, isLastPlacedOrderSta
 import { notifyOrderCancellation } from '@/lib/delivery/print-queue'
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
+import { syncOrderCancelledToCrm } from '@/lib/delivery/order-crm-sync'
+import { closeConversationByAi } from '@/lib/ai/followup-state'
 import type { ToolDefinition } from './types'
 
 /** Did the customer say anything, after `since`, that plausibly asks
@@ -1155,6 +1157,10 @@ export const cancelOrderTool: ToolDefinition = {
 
     await writeOrderInfo(ctx.db, ctx.conversationId, { lastPlacedOrderId: null, lastPlacedOrderTotal: null })
 
+    // Funnel deal + contact purchase totals must follow the cancel, same
+    // as the staff-side PATCH route does (order-crm-sync.ts).
+    await syncOrderCancelledToCrm(ctx.db, ctx.accountId, order)
+
     // Same two side effects the manual PATCH /api/delivery/orders/:id
     // route fires on a staff-initiated status change — an AI-initiated
     // cancel should look identical to anything downstream (webhooks,
@@ -1184,6 +1190,35 @@ export const cancelOrderTool: ToolDefinition = {
   },
 }
 
+export const closeConversationTool: ToolDefinition = {
+  name: 'close_conversation',
+  description:
+    "End this customer's attendance and move the chat to Closed. Call it ONLY when the customer has clearly said they do not want to order (anymore) / are just leaving, or that they ALREADY placed their order and need nothing else — typically as the answer to a follow-up message you sent. Say a short, friendly goodbye in the same reply. NEVER call it while the customer is still deciding, mid-order, or has an open question. If they write again later the chat reopens and you will be back on it.",
+  parameters: {
+    type: 'object',
+    properties: {
+      reason: {
+        type: 'string',
+        description: 'Short reason, e.g. "already ordered" or "not ordering".',
+      },
+    },
+    additionalProperties: false,
+  },
+  async execute(_args, ctx) {
+    const closed = await closeConversationByAi(ctx.db, {
+      accountId: ctx.accountId,
+      conversationId: ctx.conversationId,
+      contactId: ctx.contactId,
+      reason: 'ai_closed',
+    })
+    return {
+      content: closed
+        ? 'Conversation closed. Now reply with a short, friendly goodbye.'
+        : 'The conversation could not be closed automatically. Just say a friendly goodbye.',
+    }
+  },
+}
+
 export function getAvailableTools(args: {
   accountHasDeliveryModule: boolean
   toolsEnabled: boolean
@@ -1209,5 +1244,6 @@ export function getAvailableTools(args: {
     placeOrderTool,
     updateOrderInfoTool,
     cancelOrderTool,
+    closeConversationTool,
   ]
 }

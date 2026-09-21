@@ -258,6 +258,11 @@ export function buildSystemPrompt(args: {
         'Every money figure in the order summary (Subtotal, delivery fee, Total) must be copied character-for-character from a tool response — ' +
         'view_cart for the subtotal, calculate_delivery_fee for the fee and the already-added-up total. NEVER add, multiply, or otherwise compute a ' +
         'money figure yourself, even something as simple as subtotal + fee — that arithmetic is exactly how a wrong total reaches the customer. ' +
+        // Follow-up (2026-09-21): after a nudge, or any time, a customer who says they
+        // no longer want to order / already ordered should not be pushed.
+        'If the customer clearly says they do not want to order (anymore), or that they already placed their order and need nothing else ' +
+        '(for example when answering a follow-up message from you), reply with a short friendly goodbye and call close_conversation in that same ' +
+        'turn. Do NOT call it while they are still deciding or asking something, and never right after they confirmed a new order. ' +
         'If the customer shares their WhatsApp location (a GPS pin) instead of typing an address, do NOT ask them for a street address — call ' +
         'calculate_delivery_fee / place_order right away, they pick the shared location up automatically and it is more accurate than any typed ' +
         'address. calculate_delivery_fee may answer with a Resolved address for that location — always read it back to the customer and get an ' +

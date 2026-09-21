@@ -20,6 +20,7 @@ import { enqueuePrintJob } from '@/lib/delivery/print-queue';
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events';
 import { dispatchMetaCapiConversion } from '@/lib/integrations/meta-capi/dispatch-conversion';
 import { syncOrderCreatedToCrm } from '@/lib/delivery/order-crm-sync';
+import { scheduleAutoCloseAfterOrder } from '@/lib/ai/followup-state';
 
 export interface CartLineItemAddon {
   group_id: string;
@@ -360,6 +361,10 @@ export async function finalizeDeliveryOrder(
   // Ticket médio) so the manager can export a ready-made audience.
   // Best-effort, never throws — see order-crm-sync.ts.
   await syncOrderCreatedToCrm(db, args.accountId, order);
+
+  // Auto-close (opt-in, migration 084): N minutes after this order — and
+  // after the customer's last message — the ticket goes to Fechados.
+  if (order.conversation_id) await scheduleAutoCloseAfterOrder(db, args.accountId, order.conversation_id);
 
   return order;
 }

@@ -1,3 +1,4 @@
+import { runFollowupSweep } from '@/lib/ai/followup'
 import { markOpenLeadDealLost } from '@/lib/delivery/lead-funnel'
 import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
@@ -61,6 +62,15 @@ export async function GET(request: Request) {
   const admin = supabaseAdmin()
   const nowIso = new Date().toISOString()
 
+  // AI follow-up nudges + auto-close (opt-in per account, migration 084).
+  // Runs FIRST and unconditionally — the cart scan below returns early
+  // when nothing is in a cart, which must not skip the follow-ups — and
+  // is isolated so a failure here never affects the cart sweep.
+  const followup = await runFollowupSweep(admin).catch((err) => {
+    console.error('[delivery-cron] followup sweep failed:', err)
+    return { sent: 0, closedNoReply: 0, autoClosed: 0 }
+  })
+
   // '[]' as a string, not [] — PostgREST parses a jsonb filter value as
   // JSON, so this asks Postgres "ai_cart <> '[]'::jsonb" instead of
   // (accidentally) filtering on an empty list of values. Every
@@ -77,7 +87,7 @@ export async function GET(request: Request) {
     console.error('[delivery-cart-sweep] scan failed:', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  if (!rows?.length) return NextResponse.json({ swept: 0 })
+  if (!rows?.length) return NextResponse.json({ swept: 0, followup })
 
   type Row = { id: string; account_id: string; contact_id: string | null; ai_cart: unknown }
 
@@ -103,5 +113,5 @@ export async function GET(request: Request) {
     swept += 1
   }
 
-  return NextResponse.json({ swept })
+  return NextResponse.json({ swept, followup })
 }

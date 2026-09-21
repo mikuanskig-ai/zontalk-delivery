@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CartLineItem } from '@/lib/delivery/create-order'
 
-const mocks = vi.hoisted(() => ({ supabaseAdmin: vi.fn() }))
+const mocks = vi.hoisted(() => ({ supabaseAdmin: vi.fn(), runFollowupSweep: vi.fn() }))
+vi.mock('@/lib/ai/followup', () => ({ runFollowupSweep: mocks.runFollowupSweep }))
 vi.mock('@/lib/delivery/admin-client', () => ({ supabaseAdmin: mocks.supabaseAdmin }))
 
 import { GET } from './route'
@@ -70,6 +71,8 @@ function freshLine(overrides: Partial<CartLineItem> = {}): CartLineItem {
 beforeEach(() => {
   process.env.AUTOMATION_CRON_SECRET = SECRET
   mocks.supabaseAdmin.mockReset()
+  mocks.runFollowupSweep.mockReset()
+  mocks.runFollowupSweep.mockResolvedValue({ sent: 0, closedNoReply: 0, autoClosed: 0 })
 })
 
 describe('GET /api/delivery/cron', () => {
@@ -93,7 +96,7 @@ describe('GET /api/delivery/cron', () => {
     const res = await GET(req())
     const data = await res.json()
 
-    expect(data).toEqual({ swept: 1 })
+    expect(data).toMatchObject({ swept: 1 })
     expect(updates).toEqual([{ id: 'conv-1', ai_cart: [] }])
   })
 
@@ -106,7 +109,7 @@ describe('GET /api/delivery/cron', () => {
     const res = await GET(req())
     const data = await res.json()
 
-    expect(data).toEqual({ swept: 0 })
+    expect(data).toMatchObject({ swept: 0 })
     expect(updates).toHaveLength(0)
   })
 
@@ -115,7 +118,7 @@ describe('GET /api/delivery/cron', () => {
     mocks.supabaseAdmin.mockReturnValue(db)
 
     const res = await GET(req())
-    expect(await res.json()).toEqual({ swept: 0 })
+    expect(await res.json()).toMatchObject({ swept: 0 })
   })
 
   it('sweeps across multiple accounts in one pass', async () => {
@@ -126,7 +129,29 @@ describe('GET /api/delivery/cron', () => {
     mocks.supabaseAdmin.mockReturnValue(db)
 
     const res = await GET(req())
-    expect(await res.json()).toEqual({ swept: 2 })
+    expect(await res.json()).toMatchObject({ swept: 2 })
     expect(updates.map((u) => u.id).sort()).toEqual(['conv-1', 'conv-2'])
+  })
+
+  it('runs the AI follow-up sweep even when there are no carts to scan (early return must not skip it)', async () => {
+    const { db } = makeDb([])
+    mocks.supabaseAdmin.mockReturnValue(db)
+    mocks.runFollowupSweep.mockResolvedValue({ sent: 2, closedNoReply: 1, autoClosed: 3 })
+
+    const res = await GET(req())
+    expect(mocks.runFollowupSweep).toHaveBeenCalledTimes(1)
+    expect(await res.json()).toEqual({ swept: 0, followup: { sent: 2, closedNoReply: 1, autoClosed: 3 } })
+  })
+
+  it('a follow-up sweep failure never breaks the cart sweep', async () => {
+    const { db } = makeDb([{ id: 'conv-1', account_id: 'acct-1', ai_cart: [staleLine()] }])
+    mocks.supabaseAdmin.mockReturnValue(db)
+    mocks.runFollowupSweep.mockRejectedValue(new Error('boom'))
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const res = await GET(req())
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ swept: 1, followup: { sent: 0, closedNoReply: 0, autoClosed: 0 } })
+    spy.mockRestore()
   })
 })

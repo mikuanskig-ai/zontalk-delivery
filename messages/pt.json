@@ -2770,6 +2770,27 @@
       "reindexTooltip": "Regerar embeddings de todos os documentos (ex.: depois de adicionar uma chave de embeddings)",
       "loading": "Carregando…"
     },
+    "aiFollowup": {
+      "title": "Follow-up e encerramento automático",
+      "description": "Cuida do cliente que começou o pedido e sumiu, e manda os atendimentos concluídos para Fechados sozinho. Tudo é opcional e começa desligado.",
+      "needsAi": "Configure e ative a IA acima antes de usar o follow-up.",
+      "followupToggle": "Lembrete de pedido não finalizado",
+      "followupToggleDesc": "Se o cliente colocou itens no carrinho e parou de responder, a IA manda uma mensagem para retomar o pedido.",
+      "delayLabel": "Esperar quantos minutos",
+      "maxLabel": "Quantos lembretes (1 a 3)",
+      "closeLabel": "Fechar após (min) sem resposta",
+      "timingHint": "O lembrete só sai dentro do horário de atendimento da IA. \"Fechar após\" conta a partir do último lembrete; 0 = nunca fechar sozinho.",
+      "messageLabel": "Mensagem do lembrete {n}",
+      "variablesHint": "Deixe em branco para usar o texto sugerido (aparece cinza). Use '{nome}' para o primeiro nome do cliente e '{itens}' para o que ele pediu.",
+      "autoCloseToggle": "Encerrar depois do pedido",
+      "autoCloseToggleDesc": "Depois que o pedido é feito, espera o cliente parar de falar e envia o atendimento para Fechados.",
+      "autoCloseLabel": "Minutos após o pedido (e após a última mensagem do cliente)",
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "saveSuccess": "Salvo.",
+      "saveFailed": "Falha ao salvar.",
+      "loadFailed": "Falha ao carregar."
+    },
     "metaCapi": {
       "title": "Meta Ads (Clique para WhatsApp)",
       "description": "Avisa a Meta quando um pedido feito pelo WhatsApp veio de um clique em anúncio — fecha o funil e ajuda a Meta a otimizar quem recebe o anúncio.",

@@ -2769,6 +2769,27 @@
       "reindexTooltip": "모든 문서를 다시 임베딩합니다 (예: 임베딩 키 추가 후)",
       "loading": "불러오는 중…"
     },
+    "aiFollowup": {
+      "title": "팔로우업 및 자동 종료",
+      "description": "주문을 시작했다가 응답이 없는 고객에게 메시지를 보내고, 완료된 대화를 자동으로 종료됨으로 보냅니다. 모두 선택 사항이며 꺼진 상태로 시작합니다.",
+      "needsAi": "팔로우업을 사용하려면 위에서 AI를 먼저 설정하고 켜세요.",
+      "followupToggle": "미완료 주문 알림",
+      "followupToggleDesc": "고객이 장바구니에 담고 응답하지 않으면 AI가 주문을 이어가도록 메시지를 보냅니다.",
+      "delayLabel": "대기 시간(분)",
+      "maxLabel": "알림 횟수(1~3)",
+      "closeLabel": "응답 없으면 종료(분)",
+      "timingHint": "알림은 AI 운영 시간에만 발송됩니다. \"종료\"는 마지막 알림부터 계산하며 0이면 자동 종료하지 않습니다.",
+      "messageLabel": "알림 메시지 {n}",
+      "variablesHint": "비워 두면 기본 문구(회색)를 사용합니다. '{nome}'은 고객 이름, '{itens}'는 주문 항목입니다.",
+      "autoCloseToggle": "주문 후 종료",
+      "autoCloseToggleDesc": "주문이 완료된 뒤 고객의 대화가 멈추면 대화를 종료됨으로 보냅니다.",
+      "autoCloseLabel": "주문 후(고객 마지막 메시지 후) 분",
+      "save": "저장",
+      "saving": "저장 중...",
+      "saveSuccess": "저장되었습니다.",
+      "saveFailed": "저장하지 못했습니다.",
+      "loadFailed": "불러오지 못했습니다."
+    },
     "metaCapi": {
       "title": "Meta 광고 (WhatsApp으로 클릭)",
       "description": "WhatsApp 주문이 광고 클릭에서 왔음을 Meta에 알려줍니다 — 퍼널을 닫고 Meta가 광고 노출 대상을 최적화하도록 돕습니다.",

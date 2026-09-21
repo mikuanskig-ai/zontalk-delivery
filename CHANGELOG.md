@@ -2,6 +2,37 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.34.0] — 2026-09-21
+
+### Adicionado
+
+- **Follow-up da IA para pedido não finalizado** (Agentes de IA →
+  Configuração → "Follow-up e encerramento automático"; tudo opcional e
+  desligado por padrão, migration 084). Quando o cliente coloca itens no
+  carrinho e para de responder, a IA manda uma mensagem personalizável para
+  retomar o pedido (ex.: "Oi Maria! Vi que você começou seu pedido (2x
+  Marmita M)... quer que eu continue de onde paramos?"). Configurável: quantos
+  minutos esperar (5–720), quantos lembretes (1–3), o texto de cada lembrete
+  (`{nome}` e `{itens}`; em branco = texto sugerido) e, se ainda assim não
+  responder, fechar o atendimento após X minutos (0 = nunca). Só envia no
+  horário de atendimento da IA, nunca quando o cliente é quem está esperando
+  resposta, e nunca em conversa que um humano assumiu ou com a IA pausada. Roda
+  no cron de 5 min que já existia. Cliente que só perguntou preço/cardápio
+  (sem carrinho) não recebe lembrete.
+- **Encerrar depois do pedido**: N minutos depois do pedido — e depois da
+  última mensagem do cliente — a conversa vai para Fechados sozinha. Se um
+  humano assumiu ou o cliente começou outro pedido, não fecha.
+- **A IA encerra o atendimento quando o cliente diz que não vai pedir ou que
+  já pediu** (nova ferramenta `close_conversation` + regra no prompt): despede
+  e envia para Fechados, zera o carrinho e o negócio aberto no funil vira
+  perdido. Quem escrever de novo reabre o chat e volta para a IA.
+
+### Corrigido
+
+- Cancelamento de pedido **pela IA** (ferramenta `cancel_order`) agora também
+  atualiza o funil e os totais do contato, como o cancelamento pela equipe
+  já fazia desde a 0.33.0.
+
 ## [0.33.0] — 2026-09-21
 
 ### Adicionado

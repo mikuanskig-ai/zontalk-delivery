@@ -1551,7 +1551,7 @@ describe('getAvailableTools', () => {
     ).toEqual([])
   })
 
-  it('returns all nine tools for live chat once tools_enabled is on', () => {
+  it('returns all ten tools for live chat once tools_enabled is on', () => {
     const tools = getAvailableTools({
       accountHasDeliveryModule: true,
       toolsEnabled: true,
@@ -1561,6 +1561,7 @@ describe('getAvailableTools', () => {
       'add_to_cart',
       'calculate_delivery_fee',
       'cancel_order',
+      'close_conversation',
       'get_product_details',
       'place_order',
       'search_menu',

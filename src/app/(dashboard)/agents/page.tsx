@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AiPlayground } from '@/components/agents/ai-playground';
 import { AiUsageCard } from '@/components/agents/ai-usage';
 import { AiConfig } from '@/components/settings/ai-config';
+import { AiFollowupConfig } from '@/components/settings/ai-followup-config';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
 
@@ -75,7 +76,10 @@ export default function AgentsPage() {
           </TabsContent>
 
           <TabsContent value="setup" className="mt-4">
-            <AiConfig />
+            <div className="space-y-6">
+              <AiConfig />
+              <AiFollowupConfig />
+            </div>
           </TabsContent>
 
           {canViewUsage && (

@@ -13,6 +13,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe'
+import { resetFollowupOnInbound } from '@/lib/ai/followup-state'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import { dispatchInboundToFlows } from '@/lib/flows/engine'
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply'
@@ -687,6 +688,11 @@ export async function processMessage(
   if (convError) {
     console.error('Error updating conversation:', convError)
   }
+
+  // The customer wrote: reset the follow-up nudges and push back any
+  // pending post-order auto-close (a chat they are talking in must not
+  // be closed under them). No-op unless one of those is actually set.
+  await resetFollowupOnInbound(supabaseAdmin(), accountId, conversation)
 
   await flagBroadcastReplyIfAny(accountId, contactRecord.id)
 
