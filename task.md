@@ -130,6 +130,37 @@
 
 ## Feitas
 
+### 2026-09-21 — Migração do zdelivery para VPS dedicada
+
+- Pedido do Eder: tirar o zdelivery da VPS compartilhada (104.234.186.45)
+  e rodar numa VPS só dele (177.153.62.124, Ubuntu 24.04, 2 vCPU/3,8 GB,
+  alias SSH `zdelivery-vps`). Feito de madrugada (corte 00:32, o único
+  cliente ativo estava fora do horário), com aval do Eder.
+- Migrado: app (`/opt/wacrm`, `wacrm.service`), Supabase self-hosted
+  (12 containers, banco copiado a frio byte a byte + storage), WuzAPI
+  (imagem IDÊNTICA à de produção, copiada via docker save — a tag
+  `latest` podia ter mudado — e volume do banco, então o WhatsApp da
+  Concórdia reconectou sem QR novo), Caddy (só `v2.zontalk.shop`),
+  os 5 crons do zdelivery e a chave de deploy do GitHub.
+- DNS `v2.zontalk.shop` trocado pelo Eder no Cloudflare; certificado
+  emitido; login/Supabase/webhook/crons validados.
+- `gerador.zontalk.shop` continua na VPS antiga (Caddy), mas agora faz
+  proxy para o WuzAPI novo (`177.153.62.124:8081`). A porta 8081 da nova
+  só aceita o IP da antiga (`wuzapi-firewall.service`, chain
+  DOCKER-USER).
+- VPS antiga: containers `supabase-*`/`wacrm-wuzapi*` PARADOS mas
+  intactos (caminho de volta), `wacrm.service` desabilitado. Backup em
+  `/root/backup-migracao/` (lá) e `C:\claudeackups\migracao-2026-09-21\`
+  (no PC, fora do git).
+- **A fazer**: depois de uns dias estável, apagar os containers/volumes
+  do zdelivery na antiga (libera ~1 GB de disco) e ligar o proxy laranja
+  do Cloudflare se for desejado. Deploys agora: `ssh zdelivery-vps`.
+- **Achado (pré-existente, não é da migração)**: `GET /api/billing/cron`
+  falha com 500 ("Not found") a cada minuto há pelo menos 2 dias — uma
+  fatura vencida de 01/08 cuja consulta no InfinitePay devolve 404 —
+  e como quebra no passo 1, os passos seguintes (marcar vencido,
+  suspender, gerar faturas) nunca rodam. Precisa de correção própria.
+
 ### 2026-09-20 — Monitor do agente de impressão (v0.31.0)
 
 - Pedido do Eder: saber se o Zontalk Print Agent foi aberto no
