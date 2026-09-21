@@ -130,6 +130,18 @@
 
 ## Feitas
 
+### 2026-09-21 — IA agora responde "onde fica?" com endereço real + mapa (v0.32.0)
+
+- Cliente de anúncio da Concórdia (10:43) perguntou "Onde fica" e a IA
+  disse "Shopping Cidade, Praça de Alimentação" (vago, sem mapa). O
+  endereço real (Rua Presidente Kennedy 2237, Centro, Cascavel-PR, com
+  lat/lng) estava cadastrado só para a taxa de entrega e nunca ia para a
+  IA. Agora vai como fato + link do Maps. 5 testes novos (1222 no total).
+- **Não verificado**: se o restaurante fica mesmo dentro do Shopping
+  Cidade. O endereço da taxa é de rua (Kennedy 2237); se houver
+  complemento útil (loja, piso, "Praça de Alimentação"), o dono precisa
+  colocar na base de conhecimento (a IA só cita o que estiver escrito).
+
 ### 2026-09-21 — Migração do zdelivery para VPS dedicada
 
 - Pedido do Eder: tirar o zdelivery da VPS compartilhada (104.234.186.45)

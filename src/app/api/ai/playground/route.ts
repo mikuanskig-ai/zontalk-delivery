@@ -1,3 +1,4 @@
+import { getBusinessLocation } from '@/lib/ai/business-location'
 import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
       mode: 'auto_reply',
       knowledge,
       toolsActive: tools.length > 0,
+      businessLocation: await getBusinessLocation(supabase, accountId),
     })
 
     if (tools.length > 0) {

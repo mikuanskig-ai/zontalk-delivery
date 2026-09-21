@@ -1,3 +1,4 @@
+import { getBusinessLocation } from '@/lib/ai/business-location'
 import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
@@ -127,6 +128,7 @@ export async function POST(request: Request) {
       knowledge,
       toolsActive: tools.length > 0,
       orderState,
+      businessLocation: await getBusinessLocation(supabase, accountId),
     })
 
     let text: string

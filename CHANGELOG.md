@@ -2,6 +2,25 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.32.0] — 2026-09-21
+
+### Corrigido
+
+- **IA respondia "onde fica?" de forma vaga e inventada.** Cliente vindo
+  de anúncio perguntou "Onde fica" e a IA respondeu "Fica no Shopping
+  Cidade, na Praça de Alimentação" — sem rua, sem número, sem mapa. Causa:
+  o endereço do restaurante existia no sistema (cadastrado para o cálculo
+  da taxa de entrega, `delivery_fee_configs.origin_*`), mas nunca chegava
+  à IA; a base de conhecimento, o prompt e o cardápio do dia não tinham
+  endereço nenhum, então o modelo improvisou (violando a "regra de ouro"
+  de nunca inventar). Agora o endereço completo e um link do Google Maps
+  (montado com as coordenadas já cadastradas) entram no contexto da IA
+  automaticamente, com a regra de responder com endereço + link e nunca
+  acrescentar referências (shopping, andar, ponto) que não estejam
+  escritas. Vale para contas com endereço de origem cadastrado — não
+  precisa mexer na base de conhecimento. Aplicado também ao Playground e
+  aos rascunhos de resposta.
+
 ## [0.31.2] — 2026-09-21
 
 ### Alterado

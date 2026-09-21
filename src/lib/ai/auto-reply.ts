@@ -16,6 +16,7 @@ import type { ToolContext } from './tools/types'
 import { formatCurrency } from '@/lib/currency'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { sleep } from './debounce'
+import { getBusinessLocation } from '@/lib/ai/business-location'
 import { getAiBusinessHours, getDailyMenu, isWithinBusinessHours, resolveDayKey } from '@/lib/delivery/business-hours'
 import { getPixKey } from '@/lib/payments/config'
 import type { AiUsage } from './types'
@@ -174,6 +175,7 @@ export async function dispatchInboundToAiReply(
     const dailyMenuTimezone = aiHours?.timezone ?? 'America/Sao_Paulo'
     const dailyMenu = await getDailyMenu(db, accountId)
     const todaysMenu = dailyMenu?.[resolveDayKey(dailyMenuTimezone)] ?? null
+    const businessLocation = await getBusinessLocation(db, accountId)
 
     // Deterministic, user-configured responders win over the LLM — the
     // caller already excludes messages a Flow consumed. Message-level
@@ -298,6 +300,7 @@ export async function dispatchInboundToAiReply(
         orderState,
         timezone: aiHours?.timezone,
         dailyMenu: todaysMenu,
+        businessLocation,
       })
       try {
         const result = await generateReplyWithTools({
@@ -376,6 +379,7 @@ export async function dispatchInboundToAiReply(
         knowledge,
         timezone: aiHours?.timezone,
         dailyMenu: todaysMenu,
+        businessLocation,
       })
       try {
         const result = await generateReply({ config, systemPrompt, messages })

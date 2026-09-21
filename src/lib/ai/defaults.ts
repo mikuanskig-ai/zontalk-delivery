@@ -159,6 +159,10 @@ export function buildSystemPrompt(args: {
    *  affects pricing; that's day_price_overrides' job. Omit/null when
    *  the account hasn't configured anything for today. */
   dailyMenu?: string | null
+  /** The establishment's own address + map link (see
+   *  business-location.ts). Injected as fact so "onde fica?" gets the
+   *  real address instead of an improvised, vague answer. */
+  businessLocation?: { address: string; mapsUrl: string } | null
   /** Injection point for tests only — real callers never pass this. */
   now?: Date
 }): string {
@@ -170,6 +174,7 @@ export function buildSystemPrompt(args: {
     orderState,
     timezone = 'America/Sao_Paulo',
     dailyMenu,
+    businessLocation,
     now = new Date(),
   } = args
   // Confirmed live (2026-08-11): an account's knowledge base commonly
@@ -188,6 +193,14 @@ export function buildSystemPrompt(args: {
   const parts: string[] = [todayLine]
   if (dailyMenu && dailyMenu.trim()) {
     parts.push(`What's on today's menu (tell the customer this if they ask what's available today):\n${dailyMenu.trim()}`)
+  }
+  if (businessLocation?.address) {
+    parts.push(
+      'Business location — when the customer asks where the place is, how to get there, or for the address, answer with THIS full address ' +
+        'AND the map link (put the link on its own line so it is tappable). Never describe the location in any other way and never add ' +
+        'landmarks, malls, floors or references that are not written here:\n' +
+        `Address: ${businessLocation.address}\nMap: ${businessLocation.mapsUrl}`,
+    )
   }
   parts.push(
     'You are a customer-messaging assistant for a business that uses a WhatsApp CRM. ' +

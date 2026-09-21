@@ -39,6 +39,22 @@ describe('buildSystemPrompt — today line', () => {
   })
 })
 
+describe('buildSystemPrompt — business location', () => {
+  const loc = { address: 'Rua Presidente Kennedy 2237, Centro, Cascavel - PR', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=-24.94,-53.47' }
+
+  it('injects the real address and the map link, and forbids invented references', () => {
+    const prompt = buildSystemPrompt({ userPrompt: null, mode: 'auto_reply', businessLocation: loc })
+    expect(prompt).toContain('Address: Rua Presidente Kennedy 2237, Centro, Cascavel - PR')
+    expect(prompt).toContain('Map: https://www.google.com/maps/search/?api=1&query=-24.94,-53.47')
+    expect(prompt).toContain('never add landmarks')
+  })
+
+  it('omits the section when there is no location', () => {
+    expect(buildSystemPrompt({ userPrompt: null, mode: 'auto_reply' })).not.toContain('Business location')
+    expect(buildSystemPrompt({ userPrompt: null, mode: 'auto_reply', businessLocation: null })).not.toContain('Business location')
+  })
+})
+
 describe('buildSystemPrompt — daily menu', () => {
   it("includes today's menu text when given", () => {
     const prompt = buildSystemPrompt({
