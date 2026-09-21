@@ -150,7 +150,7 @@
   DOCKER-USER).
 - VPS antiga: containers `supabase-*`/`wacrm-wuzapi*` PARADOS mas
   intactos (caminho de volta), `wacrm.service` desabilitado. Backup em
-  `/root/backup-migracao/` (lá) e `C:\claudeackups\migracao-2026-09-21\`
+  `/root/backup-migracao/` (lá) e `C:\claude\backups\migracao-2026-09-21\`
   (no PC, fora do git).
 - **A fazer**: depois de uns dias estável, apagar os containers/volumes
   do zdelivery na antiga (libera ~1 GB de disco) e ligar o proxy laranja
