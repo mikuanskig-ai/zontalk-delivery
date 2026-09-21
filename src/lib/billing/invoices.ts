@@ -44,6 +44,18 @@ export function formatPriceCents(cents: number, currency: string): string {
   }
 }
 
+/**
+ * Due date of an account's FIRST invoice: the signup date (so the
+ * grace-period clock doubles as an informal trial), but never in the
+ * past. Without the floor, an account on a paid plan that predates
+ * billing — or whose first invoice was delayed (unconfirmed email,
+ * cron down) — would get an invoice that is born overdue and be
+ * auto-suspended on the very next pass, with no chance to pay.
+ */
+export function firstInvoiceDueDate(signupAt: Date, now: Date = new Date()): Date {
+  return signupAt.getTime() < now.getTime() ? now : signupAt
+}
+
 export function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }

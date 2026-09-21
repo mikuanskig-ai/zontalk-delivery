@@ -159,7 +159,11 @@
   falha com 500 ("Not found") a cada minuto há pelo menos 2 dias — uma
   fatura vencida de 01/08 cuja consulta no InfinitePay devolve 404 —
   e como quebra no passo 1, os passos seguintes (marcar vencido,
-  suspender, gerar faturas) nunca rodam. Precisa de correção própria.
+  suspender, gerar faturas) nunca rodam. **Corrigido na v0.31.1**: a
+  causa real era o `handle` ausente no `/payment_check` do InfinitePay
+  (404 para qualquer fatura). Conta Prime de teste (contato@zontalk.shop,
+  criada 31/08) passa a receber a 1ª fatura com vencimento HOJE (não
+  31/08) — dá 3 dias de carência em vez de suspender na hora.
 
 ### 2026-09-20 — Monitor do agente de impressão (v0.31.0)
 

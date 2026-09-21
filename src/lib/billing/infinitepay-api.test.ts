@@ -70,9 +70,24 @@ describe('checkPayment', () => {
   beforeEach(() => {
     fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('INFINITEPAY_HANDLE', 'minha-loja')
   })
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
+
+  it('sends the platform handle with the order_nsu (InfinitePay 404s without it — 2026-09-21)', async () => {
+    fetchMock.mockResolvedValueOnce(okResponse({ success: false }))
+    await checkPayment({ orderNsu: 'invoice-1' })
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toContain('/payment_check')
+    expect(JSON.parse(init.body)).toEqual({ handle: 'minha-loja', order_nsu: 'invoice-1' })
+  })
+
+  it('treats a {"success":false} gateway answer as unpaid, not as an error', async () => {
+    fetchMock.mockResolvedValueOnce(okResponse({ success: false }))
+    expect(await checkPayment({ orderNsu: 'invoice-1' })).toEqual({ paid: false, paidAmountCents: 0 })
   })
 
   it('reports a paid link with its amount', async () => {

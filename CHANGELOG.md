@@ -2,6 +2,28 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.31.1] — 2026-09-21
+
+### Corrigido
+
+- **Cron de cobrança falhava a cada minuto** (500 "Not found") — a consulta
+  de pagamento ao InfinitePay (`/payment_check`) não enviava o `handle`, e
+  sem ele a API responde 404 para qualquer fatura. Ou seja, a
+  reconciliação (a rede de segurança para webhook perdido) nunca
+  funcionou, e como o erro abortava o cron inteiro, os passos seguintes
+  (marcar vencida, suspender, reativar, gerar primeira fatura e
+  renovação) também nunca rodaram. Agora envia o `handle`; fatura
+  desconhecida/não paga volta como "ainda não pago", como o código já
+  documentava.
+- **Uma falha do gateway não derruba mais o cron**: cada fatura é
+  reconciliada isolada (erro é logado e segue pra próxima).
+- **Primeira fatura nunca nasce vencida**: o vencimento passa a ser
+  "data de cadastro, mas nunca no passado". Sem isso, a conta Prime de
+  teste (criada em 31/08, sem fatura) receberia uma fatura vencida em
+  31/08 e seria suspensa automaticamente minutos depois de o cron voltar
+  a funcionar — o mesmo problema que o código já evitava para planos
+  grátis.
+
 ## [0.31.0] — 2026-09-20
 
 ### Adicionado

@@ -1,11 +1,35 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { nextPeriod, toDateString, generateInvoice, reconcileInvoice, GRACE_DAYS, RENEWAL_LEAD_DAYS } from './invoices'
+import {
+  nextPeriod,
+  toDateString,
+  generateInvoice,
+  reconcileInvoice,
+  firstInvoiceDueDate,
+  GRACE_DAYS,
+  RENEWAL_LEAD_DAYS,
+} from './invoices'
 
 vi.mock('./infinitepay-api', () => ({
   checkPayment: vi.fn(),
 }))
 import { checkPayment } from './infinitepay-api'
+
+describe('firstInvoiceDueDate', () => {
+  const now = new Date('2026-09-21T12:00:00Z')
+
+  it('keeps the signup date when it is still in the future or right now', () => {
+    const signup = new Date('2026-09-21T12:00:00Z')
+    expect(firstInvoiceDueDate(signup, now)).toEqual(signup)
+    const later = new Date('2026-09-25T00:00:00Z')
+    expect(firstInvoiceDueDate(later, now)).toEqual(later)
+  })
+
+  it('never returns a past date: an old account is not born overdue (would be suspended on the next pass)', () => {
+    const signup = new Date('2026-08-31T10:00:00Z')
+    expect(firstInvoiceDueDate(signup, now)).toEqual(now)
+  })
+})
 
 describe('constants', () => {
   it('grace and renewal-lead windows match the plan', () => {

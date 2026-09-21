@@ -9,6 +9,7 @@ import {
   toDateString,
   generateInvoice,
   reconcileInvoice,
+  firstInvoiceDueDate,
   type BillingCycle,
 } from '@/lib/billing/invoices'
 
@@ -76,8 +77,15 @@ export async function GET(request: Request) {
     .not('checkout_order_nsu', 'is', null)
     .limit(DRAIN_LIMIT)
   for (const row of toReconcile ?? []) {
-    const outcome = await reconcileInvoice(admin, row.id as string)
-    if (outcome.status === 'paid') result.reconciled++
+    // One invoice's gateway failure must not abort the run — every
+    // later phase (overdue, suspend, invoice generation) sits below
+    // this loop and used to be skipped whenever this threw.
+    try {
+      const outcome = await reconcileInvoice(admin, row.id as string)
+      if (outcome.status === 'paid') result.reconciled++
+    } catch (err) {
+      console.error('[billing/cron] reconcile failed for invoice', row.id, err)
+    }
   }
 
   // 2. Mark overdue
@@ -189,7 +197,7 @@ export async function GET(request: Request) {
     // away, "pay later" doubling as an informal trial). period_end is
     // a full cycle out — same as any renewal — so phase 6 picks up
     // the chain correctly from here.
-    const dueDate = new Date(account.created_at as string)
+    const dueDate = firstInvoiceDueDate(new Date(account.created_at as string))
     const { periodStart, periodEnd } = nextPeriod(plan.billing_cycle as BillingCycle, dueDate)
     const inserted = await generateInvoice(admin, {
       accountId: account.id as string,

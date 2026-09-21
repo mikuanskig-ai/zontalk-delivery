@@ -87,6 +87,8 @@ export async function createPaymentLink(
 
 export interface CheckPaymentArgs {
   orderNsu: string
+  /** Defaults to the platform's INFINITEPAY_HANDLE. */
+  handle?: string
 }
 
 export interface CheckPaymentResult {
@@ -103,16 +105,21 @@ interface InfinitePayCheckResponse {
 
 /**
  * Polls InfinitePay's own record for a payment link, independent of
- * whether a webhook ever arrived. Returns `null` when the gateway has
- * no record of this order yet (link created but never paid/checked
- * out) rather than throwing — that's a normal "still pending" state,
- * not an error.
+ * whether a webhook ever arrived.
+ *
+ * The `handle` is REQUIRED by InfinitePay's /payment_check: without it
+ * the API answers 404 "Not found" for every order, paid or not
+ * (confirmed live 2026-09-21 — the cron's reconcile phase failed on
+ * every run for that reason, and since the throw aborted the whole
+ * cron, later billing phases never ran either). With the handle, an
+ * unknown or unpaid order answers 200 `{"success":false}`, which is
+ * the normal "still pending" state.
  */
 export async function checkPayment(args: CheckPaymentArgs): Promise<CheckPaymentResult | null> {
-  const { orderNsu } = args
+  const { orderNsu, handle = getInfinitePayHandle() } = args
   const data = await checkoutRequest<InfinitePayCheckResponse>({
     path: '/payment_check',
-    body: { order_nsu: orderNsu },
+    body: { handle, order_nsu: orderNsu },
   })
   if (!data.paid) return { paid: false, paidAmountCents: 0 }
   return { paid: true, paidAmountCents: data.paid_amount ?? data.amount ?? 0 }
