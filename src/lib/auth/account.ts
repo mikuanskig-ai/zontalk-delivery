@@ -26,24 +26,10 @@
 // ============================================================
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 import { hasMinRole, isAccountRole, type AccountRole } from "./roles";
-
-/** Set (never trusted for its value — see `findActiveImpersonation`'s
- *  doc) by the impersonation start/exit routes purely so the 99.9% of
- *  requests that are never a platform admin mid-impersonation skip the
- *  extra `admin_impersonation_sessions` round trip below entirely. */
-export const IMPERSONATION_COOKIE = "zdelivery_impersonating";
-
-/** How long an "Acessar Empresa" grant lasts before it stops being
- *  honored on its own (the exit button ends it sooner). One number,
- *  shared by the start route (grant's `expires_at`) and its cookie
- *  (`maxAge`) so the two can never drift out of sync. A support
- *  session that runs long just starts a fresh one. */
-export const IMPERSONATION_SESSION_MINUTES = 60;
 
 // ------------------------------------------------------------
 // Errors
@@ -95,21 +81,14 @@ export function toErrorResponse(err: unknown): NextResponse {
 export interface AccountContext {
   /** Supabase SSR client, RLS scoped to the calling user. */
   supabase: SupabaseClient;
-  /** `auth.uid()` for the caller. Always defined when this resolves.
-   *  Stays the REAL platform admin's own id while impersonating — see
-   *  `impersonating` below — `accountId`/`role` are what moves. */
+  /** `auth.uid()` for the caller. Always defined when this resolves. */
   userId: string;
-  /** Effective account_id — the caller's own (from their profile row),
-   *  or the target account while impersonating (migration 080). */
+  /** The caller's account_id (from their profile row). */
   accountId: string;
-  /** Effective role — the caller's own, or the impersonation grant's
-   *  `target_role` (always 'owner' today) while impersonating. */
+  /** The caller's role in that account. */
   role: AccountRole;
   /** Lightweight account meta — id + name + status. */
   account: { id: string; name: string; status: string };
-  /** True when this context comes from a live "Acessar Empresa" grant
-   *  (migration 080) rather than the caller's own profile row. */
-  impersonating: boolean;
 }
 
 /**
@@ -133,26 +112,9 @@ async function resolveAccountContext(allowSuspended: boolean): Promise<AccountCo
     throw new UnauthorizedError();
   }
 
-  // A live impersonation grant (migration 080) wins over the caller's
-  // own profile — while it's active, every page/route should operate
-  // on the target account, not the admin's own. Gated behind a cheap
-  // cookie check first: the cookie's VALUE is never trusted (the real
-  // check below always re-verifies against admin_user_id = auth.uid()
-  // in the grants table, so a forged/stale cookie just falls through
-  // to "no active grant" — it exists purely so the overwhelming
-  // majority of requests, from users who are never a platform admin
-  // mid-impersonation, skip the extra query entirely.
-  const impersonatingCookie = (await cookies()).get(IMPERSONATION_COOKIE)?.value === "1";
-  const impersonation = impersonatingCookie
-    ? await findActiveImpersonation(supabase, user.id)
-    : null;
-
   let accountId: string;
   let role: AccountRole;
-  if (impersonation) {
-    accountId = impersonation.accountId;
-    role = impersonation.role;
-  } else {
+  {
     const { data, error } = await supabase
       .from("profiles")
       .select("account_id, account_role")
@@ -218,44 +180,7 @@ async function resolveAccountContext(allowSuspended: boolean): Promise<AccountCo
     accountId,
     role,
     account: { id: account.id, name: account.name, status: account.status },
-    impersonating: impersonation !== null,
   };
-}
-
-/**
- * Migration 080 — "Acessar Empresa". A platform admin with a live,
- * unexpired impersonation grant sees the TARGET account here instead
- * of their own — every table's RLS already honors the same grant via
- * `is_account_member` (see the migration's doc comment), so once this
- * one seam returns the target's context, every route built on
- * `getCurrentAccount`/`requireRole` transparently operates as that
- * account, with zero per-route changes.
- *
- * Best-effort: any failure reading the grants table (missing
- * migration, transient error) falls through to the caller's own
- * account exactly as before impersonation existed — a broken grant
- * lookup must never lock an admin out of their own account context.
- */
-async function findActiveImpersonation(
-  supabase: SupabaseClient,
-  adminUserId: string,
-): Promise<{ accountId: string; role: AccountRole } | null> {
-  try {
-    const { data, error } = await supabase
-      .from("admin_impersonation_sessions")
-      .select("target_account_id, target_role")
-      .eq("admin_user_id", adminUserId)
-      .is("ended_at", null)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error || !data) return null;
-    if (!isAccountRole(data.target_role)) return null;
-    return { accountId: data.target_account_id as string, role: data.target_role };
-  } catch {
-    return null;
-  }
 }
 
 /**

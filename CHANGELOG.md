@@ -2,6 +2,33 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.35.0] — 2026-09-21
+
+### Alterado
+
+- **"Acessar empresa" agora é um login de verdade como o administrador da
+  empresa.** Antes você continuava logado com o SEU usuário e só ganhava
+  acesso aos dados da empresa (migration 080). Agora, ao clicar em Acessar
+  empresa, o navegador troca a sessão para o usuário dono da empresa (ou um
+  usuário admin, se não houver dono): nome, permissões, foto e tudo o que você
+  fizer ali passam a ser desse usuário — sem e-mail nem senha, o servidor
+  gera o login. O banner no topo mostra "Você entrou como <nome> · <empresa>"
+  e o botão **"Voltar para o meu usuário"** devolve a sua sessão de admin.
+  - Segurança: o retorno usa um bilhete assinado (HMAC) em cookie httpOnly,
+    válido por 8h; ao sair, o servidor confere a assinatura, se a sessão atual
+    é mesmo a do usuário do bilhete e se você ainda é admin da plataforma.
+    Se a troca falhar, nada muda (você segue no seu usuário).
+  - Como dentro da empresa você é indistinguível do usuário real, cada entrada
+    e saída fica registrada em `admin_login_as_log` (migration 085).
+  - Enquanto você está lá dentro, a presença ("online") do usuário real não é
+    atualizada por você.
+  - O acesso continua limitado a admins da plataforma e a empresa precisa ter
+    um usuário dono/admin; senão aparece "Essa empresa não tem um usuário
+    administrador para acessar".
+  - Retirado o mecanismo antigo de "concessão de acesso" (código no
+    cliente/servidor); a migration 085 encerra qualquer concessão ainda
+    aberta.
+
 ## [0.34.1] — 2026-09-21
 
 ### Alterado

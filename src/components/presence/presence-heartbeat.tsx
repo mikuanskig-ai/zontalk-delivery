@@ -20,7 +20,7 @@ import { HEARTBEAT_MS, IDLE_AFTER_MS, type StoredPresence } from "@/lib/presence
  * 'offline' from staleness — no unreliable unload write needed.
  */
 export function PresenceHeartbeat() {
-  const { accountId } = useAuth();
+  const { accountId, isImpersonating } = useAuth();
 
   // 0 = "never recorded"; set on mount so we don't read the clock during
   // render (impure). Until the effect runs the tab counts as active.
@@ -31,7 +31,10 @@ export function PresenceHeartbeat() {
     // window on a fresh signup — authed but profile/account row not yet
     // created — would make touch_presence raise "No account for caller"
     // and log a spurious error. The effect re-runs once accountId lands.
-    if (!accountId) return;
+    // An admin visiting a company through "Acessar empresa" is logged in
+    // as that company's user — beating would show the real user as
+    // online (and fill their presence history) while nobody is there.
+    if (!accountId || isImpersonating) return;
 
     const supabase = createClient();
     let cancelled = false;
@@ -99,7 +102,7 @@ export function PresenceHeartbeat() {
       document.removeEventListener("visibilitychange", onReturn);
       window.removeEventListener("focus", onReturn);
     };
-  }, [accountId]);
+  }, [accountId, isImpersonating]);
 
   return null;
 }

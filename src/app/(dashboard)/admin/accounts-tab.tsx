@@ -143,13 +143,14 @@ export function AdminAccountsTab() {
     try {
       const res = await fetch(`/api/admin/accounts/${account.id}/impersonate`, { method: "POST" });
       if (res.ok) {
-        // Full navigation, not router.push — the dashboard shell's
-        // AuthProvider needs a fresh mount to pick up the new
-        // impersonation grant via useAuth's own profile fetch.
+        // Full navigation, not router.push — the session was just swapped
+        // to the company's user, so the dashboard shell's AuthProvider
+        // needs a fresh mount to load that user's profile.
         window.location.href = "/dashboard";
         return;
       }
-      toast.error(t("accessCompanyFailed"));
+      const body = await res.json().catch(() => ({}));
+      toast.error(body?.error === "no_admin_user" ? t("accessCompanyNoAdmin") : t("accessCompanyFailed"));
     } catch {
       toast.error(t("accessCompanyFailed"));
     } finally {

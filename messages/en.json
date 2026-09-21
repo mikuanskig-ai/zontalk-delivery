@@ -88,7 +88,8 @@
       "tabPlans": "Plans",
       "accessCompany": "Access company",
       "accessCompanyStarting": "Entering...",
-      "accessCompanyFailed": "Failed to access the company."
+      "accessCompanyFailed": "Failed to access the company.",
+      "accessCompanyNoAdmin": "This company has no admin user to sign in as."
     },
     "finance": {
       "filterFrom": "Start date",
@@ -3022,8 +3023,8 @@
     "couldNotSignOut": "Could not sign out. Try refreshing the page."
   },
   "ImpersonationBanner": {
-    "viewingAs": "You are viewing the dashboard as",
-    "exit": "Exit impersonation",
+    "loggedInAs": "You are logged in as",
+    "exit": "Back to my user",
     "exiting": "Exiting..."
   },
   "PrintAgentBanner": {

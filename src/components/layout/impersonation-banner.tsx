@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
  */
 export function ImpersonationBanner() {
   const t = useTranslations("ImpersonationBanner");
-  const { isImpersonating, account, exitImpersonation } = useAuth();
+  const { isImpersonating, account, profile, user, exitImpersonation } = useAuth();
   const [exiting, setExiting] = useState(false);
 
   if (!isImpersonating) return null;
@@ -32,7 +32,8 @@ export function ImpersonationBanner() {
   return (
     <div className="flex items-center justify-between gap-3 bg-amber-500 px-4 py-2 text-sm font-medium text-amber-950">
       <span>
-        {t("viewingAs")} <strong>{account?.name ?? "…"}</strong>
+        {t("loggedInAs")} <strong>{profile?.full_name || user?.email || "…"}</strong>
+        {account?.name ? <> · {account.name}</> : null}
       </span>
       <button
         type="button"

@@ -88,7 +88,8 @@
       "tabPlans": "Planos",
       "accessCompany": "Acessar empresa",
       "accessCompanyStarting": "Entrando...",
-      "accessCompanyFailed": "Falha ao acessar a empresa."
+      "accessCompanyFailed": "Falha ao acessar a empresa.",
+      "accessCompanyNoAdmin": "Essa empresa não tem um usuário administrador para acessar."
     },
     "finance": {
       "filterFrom": "Data inicial",
@@ -3022,8 +3023,8 @@
     "couldNotSignOut": "Não foi possível sair. Tente atualizar a página."
   },
   "ImpersonationBanner": {
-    "viewingAs": "Você está vendo o painel como",
-    "exit": "Sair da simulação",
+    "loggedInAs": "Você entrou como",
+    "exit": "Voltar para o meu usuário",
     "exiting": "Saindo..."
   },
   "PrintAgentBanner": {

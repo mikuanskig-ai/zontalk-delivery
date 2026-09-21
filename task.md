@@ -130,6 +130,22 @@
 
 ## Feitas
 
+### 2026-09-21 — "Acessar empresa" vira login de verdade como o admin da empresa (v0.35.0)
+
+- Pedido do Eder: ao acessar uma empresa pelo painel admin, entrar com a conta
+  admin (dono) da empresa, e não com o usuário dele.
+- Feito: troca de sessão real (login sem senha gerado pelo servidor) + bilhete
+  assinado para voltar + auditoria (`admin_login_as_log`, migration 085,
+  aplicada em produção). Ver CHANGELOG 0.35.0.
+- **NÃO verificado ao vivo**: a troca de sessão em si (gerar o token de login
+  e resgatá-lo no GoTrue self-hosted) não pôde ser testada contra produção
+  (bloqueado por segurança) — só por testes automatizados. O código tenta os
+  dois tipos de verificação (`magiclink` e `email`) e, se falhar, o admin
+  segue no próprio usuário. O Eder precisa clicar em "Acessar empresa" uma
+  vez e me dizer se funcionou (e se "Voltar para o meu usuário" também).
+- Plano B se o GoTrue recusar: se o bilhete de retorno falhar, é só sair e
+  entrar de novo com a senha do próprio admin.
+
 ### 2026-09-21 — Follow-up de pedido não finalizado + encerramento automático (v0.34.0)
 
 - Pedido do Eder: lembrete para quem começou o pedido e sumiu (personalizável),

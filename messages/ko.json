@@ -88,7 +88,8 @@
       "tabPlans": "요금제",
       "accessCompany": "회사 접속",
       "accessCompanyStarting": "입장 중...",
-      "accessCompanyFailed": "회사 접속에 실패했습니다."
+      "accessCompanyFailed": "회사 접속에 실패했습니다.",
+      "accessCompanyNoAdmin": "이 회사에는 로그인할 관리자 사용자가 없습니다."
     },
     "finance": {
       "filterFrom": "시작일",
@@ -3021,8 +3022,8 @@
     "couldNotSignOut": "로그아웃할 수 없습니다. 페이지를 새로고침해 보세요."
   },
   "ImpersonationBanner": {
-    "viewingAs": "다음 계정으로 대시보드를 보는 중입니다",
-    "exit": "접속 종료",
+    "loggedInAs": "다음 사용자로 로그인됨",
+    "exit": "내 계정으로 돌아가기",
     "exiting": "종료 중..."
   },
   "PrintAgentBanner": {

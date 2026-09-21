@@ -82,24 +82,11 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: () => createClient(),
 }));
 
-// account.ts reads the impersonation fast-path cookie directly via
-// next/headers — mocked as a tiny in-memory jar the tests below set
-// before each call, mirroring how `@/lib/supabase/server`'s own
-// `cookies()` usage is already sidestepped by mocking that module.
-let cookieJar = new Map<string, string>();
-vi.mock("next/headers", () => ({
-  cookies: async () => ({
-    get: (name: string) =>
-      cookieJar.has(name) ? { name, value: cookieJar.get(name)! } : undefined,
-  }),
-}));
-
-const { getCurrentAccount, UnauthorizedError, ForbiddenError, IMPERSONATION_COOKIE } =
+const { getCurrentAccount, UnauthorizedError, ForbiddenError } =
   await import("./account");
 
 afterEach(() => {
   vi.clearAllMocks();
-  cookieJar = new Map();
 });
 
 describe("getCurrentAccount", () => {
@@ -203,10 +190,12 @@ describe("getCurrentAccount", () => {
   });
 
   // ------------------------------------------------------------
-  // Migration 080 — "Acessar Empresa" impersonation grants.
+  // "Acessar empresa" is a real login now (migration 085): the session
+  // itself is the company's user, so the context resolves from the
+  // caller's own profile like anyone else's — no grant lookups.
   // ------------------------------------------------------------
 
-  it("skips the impersonation lookup entirely when the fast-path cookie is absent — the common case for every non-admin request", async () => {
+  it("resolves strictly from the caller's own profile and account — no impersonation-grant query", async () => {
     const { client, calls } = makeClient({
       user: { id: "user-1" },
       byTable: {
@@ -218,71 +207,7 @@ describe("getCurrentAccount", () => {
 
     const ctx = await getCurrentAccount();
 
-    expect(ctx.impersonating).toBe(false);
-    expect(ctx.accountId).toBe("acct-1");
-    // No admin_impersonation_sessions query at all — the cookie gate
-    // short-circuited before the table was ever touched.
+    expect(ctx).toMatchObject({ userId: "user-1", accountId: "acct-1", role: "owner" });
     expect(calls.map((c) => c.table)).toEqual(["profiles", "accounts"]);
-  });
-
-  it("returns the TARGET account's context when a live impersonation grant matches the cookie hint", async () => {
-    cookieJar.set(IMPERSONATION_COOKIE, "1");
-    const { client } = makeClient({
-      user: { id: "admin-1" },
-      byTable: {
-        admin_impersonation_sessions: {
-          data: { target_account_id: "target-acct", target_role: "owner" },
-          error: null,
-        },
-        accounts: { data: { id: "target-acct", name: "Empresa Alvo" }, error: null },
-      },
-    });
-    createClient.mockReturnValue(client);
-
-    const ctx = await getCurrentAccount();
-
-    expect(ctx).toMatchObject({
-      userId: "admin-1", // the real admin's own id — never overwritten
-      accountId: "target-acct",
-      role: "owner",
-      account: { id: "target-acct", name: "Empresa Alvo" },
-      impersonating: true,
-    });
-  });
-
-  it("falls back to the caller's own profile when the cookie is set but no grant is actually active (expired/ended/revoked)", async () => {
-    cookieJar.set(IMPERSONATION_COOKIE, "1");
-    const { client } = makeClient({
-      user: { id: "admin-1" },
-      byTable: {
-        admin_impersonation_sessions: { data: null, error: null },
-        profiles: { data: { account_id: "own-acct", account_role: "owner" }, error: null },
-        accounts: { data: { id: "own-acct", name: "Own Co" }, error: null },
-      },
-    });
-    createClient.mockReturnValue(client);
-
-    const ctx = await getCurrentAccount();
-
-    expect(ctx.impersonating).toBe(false);
-    expect(ctx.accountId).toBe("own-acct");
-  });
-
-  it("falls back to the caller's own profile when the grants table query errors — a broken lookup must never lock an admin out of their own account", async () => {
-    cookieJar.set(IMPERSONATION_COOKIE, "1");
-    const { client } = makeClient({
-      user: { id: "admin-1" },
-      byTable: {
-        admin_impersonation_sessions: { data: null, error: { code: "42P01" } }, // undefined_table, e.g. pre-080
-        profiles: { data: { account_id: "own-acct", account_role: "admin" }, error: null },
-        accounts: { data: { id: "own-acct", name: "Own Co" }, error: null },
-      },
-    });
-    createClient.mockReturnValue(client);
-
-    const ctx = await getCurrentAccount();
-
-    expect(ctx.impersonating).toBe(false);
-    expect(ctx.accountId).toBe("own-acct");
   });
 });

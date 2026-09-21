@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/client";
-import { findActiveImpersonationClient } from "@/lib/auth/impersonation-client";
 
 /**
  * Shared media-upload helper for Supabase Storage buckets that use the
@@ -96,26 +95,14 @@ export async function uploadAccountMedia(
   // paths would be rejected.
   const { data: profile, error: profileErr } = await supabase
     .from("profiles")
-    .select("account_id, is_platform_admin")
+    .select("account_id")
     .eq("user_id", user.id)
     .maybeSingle();
   if (profileErr || !profile?.account_id) {
     throw new Error("Could not resolve your account.");
   }
 
-  // Migration 080 — a platform admin viewing the app via "Acessar
-  // empresa" must upload under the TARGET account's path, not their
-  // own (same gap class fixed in the inbox connection-status check,
-  // 2026-09-13) — an upload attached to a message sent from inside the
-  // impersonated inbox otherwise lands in the admin's own bucket
-  // folder instead of the tenant's.
-  let effectiveAccountId = profile.account_id as string;
-  if (profile.is_platform_admin) {
-    const grant = await findActiveImpersonationClient(supabase, user.id);
-    if (grant) effectiveAccountId = grant.accountId;
-  }
-
-  const path = buildMediaPath(effectiveAccountId, file.name);
+  const path = buildMediaPath(profile.account_id as string, file.name);
   const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, {
     cacheControl: "3600",
     upsert: false,

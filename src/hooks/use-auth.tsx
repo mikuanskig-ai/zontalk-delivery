@@ -13,7 +13,6 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { DEFAULT_CURRENCY } from "@/lib/currency";
-import { findActiveImpersonationClient } from "@/lib/auth/impersonation-client";
 import {
   canEditSettings as canEditSettingsFor,
   canManageMembers as canManageMembersFor,
@@ -117,15 +116,15 @@ interface AuthContextValue {
   isPlatformAdmin: boolean;
   /** True if the current account is suspended (migration 062). */
   isSuspended: boolean;
-  /** True while viewing the app as a target account via "Acessar
-   *  Empresa" (migration 080) — `accountId`/`account`/`accountRole`
-   *  above are already the TARGET's, this just tells chrome (the
-   *  impersonation banner) to render. */
+  /** True while a platform admin is logged in AS a company's own user
+   *  via "Acessar empresa" (a real login, migration 085) — everything
+   *  above is genuinely that user's, this only tells chrome (the banner,
+   *  the presence heartbeat) that it is an admin visit. Read from a
+   *  browser-visible flag cookie; it carries no authority. */
   isImpersonating: boolean;
-  /** Ends the current impersonation grant and reloads the page so
-   *  every already-fetched piece of state (not just this hook's) goes
-   *  back to reflecting the admin's own account. No-op if not
-   *  impersonating. */
+  /** Swaps the session back to the admin who started the visit and
+   *  reloads, so every already-fetched piece of state starts over as
+   *  the admin. No-op if not impersonating. */
   exitImpersonation: () => Promise<void>;
 }
 
@@ -140,7 +139,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [account, setAccount] = useState<AccountSummary | null>(null);
+  // Browser-visible flag set by the impersonation start route. Read after
+  // mount (never during render) so server and client markup agree.
   const [impersonating, setImpersonating] = useState(false);
+  useEffect(() => {
+    setImpersonating(/(?:^|;\s*)zdelivery_imp=1(?:;|$)/.test(document.cookie));
+  }, []);
   const [loading, setLoading] = useState(true);
   // Tracked separately from `loading`. The session settles fast (one
   // local cookie read); the profile fetch crosses the network and
@@ -181,31 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data) {
-        // Migration 080 — "Acessar Empresa". Only a platform admin can
-        // ever have a live grant (see admin_impersonation_sessions'
-        // SELECT policy: admin_user_id = auth.uid()), so gate the extra
-        // round trip on `is_platform_admin` — the overwhelming majority
-        // of users skip it entirely, same reasoning as the cookie gate
-        // in the server-side resolver (src/lib/auth/account.ts).
-        //
-        // When a grant is live, EVERYTHING below resolves off the
-        // TARGET account_id/role instead of this profile row's own —
-        // every page reads "which account am I in" through this hook,
-        // so this one seam is enough for the whole dashboard to show
-        // the target account, mirroring how `is_account_member` alone
-        // covers every RLS policy server-side.
-        let effectiveAccountId = data.account_id;
-        let effectiveAccountRole = data.account_role;
-        let impersonatingNow = false;
-        if (data.is_platform_admin) {
-          const grant = await findActiveImpersonationClient(supabase, userId);
-          if (grant) {
-            effectiveAccountId = grant.accountId;
-            effectiveAccountRole = grant.role;
-            impersonatingNow = true;
-          }
-        }
-        setImpersonating(impersonatingNow);
+        const effectiveAccountId = data.account_id;
+        const effectiveAccountRole = data.account_role;
 
         // Load the account with a plain lookup by id instead of an
         // embedded FK join. The embed (`account:accounts!inner(...)`)
@@ -343,7 +324,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastFetchedUserIdRef.current = null;
         setProfile(null);
         setAccount(null);
-        setImpersonating(false);
         setProfileLoading(false);
       }
 
@@ -373,16 +353,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const exitImpersonation = useCallback(async () => {
     if (!impersonating) return;
+    let ok = false;
+    let noTicket = false;
     try {
-      await fetch("/api/admin/impersonate/exit", { method: "POST" });
+      const res = await fetch("/api/admin/impersonate/exit", { method: "POST" });
+      ok = res.ok;
+      noTicket = res.status === 401;
     } catch (err) {
       console.error("[AuthProvider] exitImpersonation failed:", err);
     }
     // Full reload, not just refreshProfile() — every already-fetched
-    // piece of page state (inbox, contacts, whatever was open) was
-    // loaded scoped to the target account and needs to start over
-    // scoped to the admin's own, not just this hook's derived fields.
-    window.location.href = "/admin";
+    // piece of page state was loaded as the company's user and needs to
+    // start over as the admin. If the return ticket is gone (expired /
+    // cleared), the only way back is signing in again.
+    window.location.href = ok ? "/admin" : noTicket ? "/login" : window.location.href;
   }, [impersonating]);
 
   // Derive the role booleans once per profile change rather than on
