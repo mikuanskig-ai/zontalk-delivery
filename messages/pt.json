@@ -2789,7 +2789,8 @@
       "saving": "Salvando...",
       "saveSuccess": "Salvo.",
       "saveFailed": "Falha ao salvar.",
-      "loadFailed": "Falha ao carregar."
+      "loadFailed": "Falha ao carregar.",
+      "moduleOff": "O follow-up funciona com pedidos de delivery e só aparece para contas com o módulo Delivery ativado (Configurações → Módulos)."
     },
     "metaCapi": {
       "title": "Meta Ads (Clique para WhatsApp)",
@@ -2938,6 +2939,7 @@
     "subtitle": "Seu agente de IA com chave própria — configure e teste no playground antes de deixar ele responder clientes de verdade no inbox.",
     "tabPlayground": "Playground",
     "tabSetup": "Configuração",
+    "tabFollowup": "Follow-up",
     "tabUsage": "Uso",
     "usage": {
       "title": "Uso de tokens",

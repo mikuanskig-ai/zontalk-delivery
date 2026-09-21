@@ -102,7 +102,15 @@ export function AiFollowupConfig() {
     }
   }
 
-  if (profileLoading || !moduleEnabled) return null;
+  if (profileLoading) return null;
+
+  if (!moduleEnabled) {
+    return (
+      <Card>
+        <CardContent className="py-6 text-sm text-muted-foreground">{t('moduleOff')}</CardContent>
+      </Card>
+    );
+  }
 
   if (loading) {
     return (

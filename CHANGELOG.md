@@ -2,6 +2,16 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.34.1] — 2026-09-21
+
+### Alterado
+
+- **Follow-up ganhou aba própria em Agentes de IA** (Playground · Configuração ·
+  **Follow-up** · Uso). Na 0.34.0 o card ficou no fim da aba Configuração,
+  embaixo de um formulário longo, e a tela abre por padrão no Playground — o
+  Eder procurou e não achou. Em contas sem o módulo Delivery a aba explica
+  que o recurso depende dele, em vez de sumir sem aviso.
+
 ## [0.34.0] — 2026-09-21
 
 ### Adicionado

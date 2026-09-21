@@ -2789,7 +2789,8 @@
       "saving": "Saving...",
       "saveSuccess": "Saved.",
       "saveFailed": "Failed to save.",
-      "loadFailed": "Failed to load."
+      "loadFailed": "Failed to load.",
+      "moduleOff": "Follow-up works with delivery orders and is only available for accounts with the Delivery module turned on (Settings → Modules)."
     },
     "metaCapi": {
       "title": "Meta Ads (Click to WhatsApp)",
@@ -2938,6 +2939,7 @@
     "subtitle": "Your bring-your-own-key AI agent — set it up, then test it in the playground before it replies to customers in the inbox.",
     "tabPlayground": "Playground",
     "tabSetup": "Setup",
+    "tabFollowup": "Follow-up",
     "tabUsage": "Usage",
     "usage": {
       "title": "Token usage",
