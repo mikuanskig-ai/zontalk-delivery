@@ -1,7 +1,37 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { FLAG_COOKIE, RETURN_COOKIE, isAutoExitDue, verifyReturnToken } from '@/lib/auth/login-as'
+
+// node:crypto (used to verify the signed return-ticket cookie below)
+// needs the Node middleware runtime, not the default edge one.
+export const runtime = 'nodejs'
 
 export async function middleware(request: NextRequest) {
+  // "Acessar empresa" auto-timeout (Eder, 2026-09-22): closing the tab
+  // and coming back later left an admin stuck logged in as whatever
+  // company they last visited, with no time-based way out. Checked on
+  // every plain page navigation (not API calls, so an in-flight fetch
+  // never gets redirected instead of its expected JSON) before any
+  // other routing below — a stale ticket or one past AUTO_EXIT_AFTER_MS
+  // sends the browser to the exit route, which swaps the session back
+  // to the admin and redirects into /admin.
+  if (
+    request.method === 'GET' &&
+    !request.nextUrl.pathname.startsWith('/api/') &&
+    !request.nextUrl.pathname.startsWith('/_next/') &&
+    request.cookies.get(FLAG_COOKIE)?.value === '1'
+  ) {
+    const secret = process.env.ENCRYPTION_KEY ?? ''
+    const ticket = verifyReturnToken(request.cookies.get(RETURN_COOKIE)?.value, secret)
+    if (!ticket || isAutoExitDue(ticket)) {
+      const url = request.nextUrl.clone()
+      const next = encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)
+      url.pathname = '/api/admin/impersonate/exit'
+      url.search = `?next=${next}`
+      return NextResponse.redirect(url)
+    }
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

@@ -130,3 +130,81 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 });
+
+describe("middleware — 'Acessar empresa' auto-exit timeout (2026-09-22)", () => {
+  const SECRET = "c".repeat(64);
+  const NOW = 1_800_000_000_000;
+
+  async function signTicket(overrides: Record<string, unknown> = {}) {
+    const { signReturnToken } = await import("@/lib/auth/login-as");
+    return signReturnToken(
+      {
+        adminUserId: "admin-1",
+        adminEmail: "admin@zontalk.shop",
+        targetUserId: "owner-1",
+        accountId: "acc-1",
+        startedAt: NOW,
+        exp: NOW + 8 * 60 * 60 * 1000,
+        ...overrides,
+      } as never,
+      SECRET,
+    );
+  }
+
+  beforeEach(() => {
+    process.env.ENCRYPTION_KEY = SECRET;
+    mockUser = { id: "owner-1" };
+    refreshedCookies = [];
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("passes through — well within the timeout, ticket still fresh", async () => {
+    const ticket = await signTicket();
+    const res = await middleware(
+      new NextRequest("https://app.test/inbox", {
+        headers: { cookie: `zdelivery_imp=1; zdelivery_admin_return=${ticket}` },
+      }),
+    );
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("redirects to the auto-exit route once AUTO_EXIT_AFTER_MS has elapsed", async () => {
+    const ticket = await signTicket();
+    vi.setSystemTime(NOW + 30 * 60 * 1000);
+    const res = await middleware(
+      new NextRequest("https://app.test/inbox", {
+        headers: { cookie: `zdelivery_imp=1; zdelivery_admin_return=${ticket}` },
+      }),
+    );
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/api/admin/impersonate/exit");
+    expect(location.searchParams.get("next")).toBe("/inbox");
+  });
+
+  it("redirects when the flag cookie is set but the return ticket is missing/corrupt", async () => {
+    const res = await middleware(
+      new NextRequest("https://app.test/inbox", { headers: { cookie: "zdelivery_imp=1" } }),
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/api/admin/impersonate/exit");
+  });
+
+  it("never redirects an API call — an in-flight fetch must get its expected JSON, not a 307", async () => {
+    const ticket = await signTicket();
+    vi.setSystemTime(NOW + 30 * 60 * 1000);
+    const res = await middleware(
+      new NextRequest("https://app.test/api/conversations", {
+        headers: { cookie: `zdelivery_imp=1; zdelivery_admin_return=${ticket}` },
+      }),
+    );
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("does not check at all when not impersonating (no flag cookie)", async () => {
+    const res = await middleware(new NextRequest("https://app.test/inbox"));
+    expect(res.headers.get("location")).toBeNull();
+  });
+});

@@ -2,6 +2,20 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.35.2] — 2026-09-22
+
+### Corrigido
+
+- **"Acessar empresa" agora sai sozinho depois de 30 minutos.** Achado pelo
+  Eder: ao fechar o navegador durante um "Acessar empresa" e voltar depois,
+  a sessão continuava logada como a última empresa acessada — sem nenhum
+  jeito automático de voltar pro próprio usuário admin. Agora, 30 minutos
+  após entrar numa empresa, a primeira página que o admin abrir troca a
+  sessão de volta sozinha (sem precisar clicar em "Voltar para o meu
+  usuário") e mostra um aviso "Sessão de suporte expirada — você voltou
+  para a sua conta". Chamadas de API em andamento não são afetadas — só
+  navegação de página é verificada.
+
 ## [0.35.1] — 2026-09-22
 
 ### Adicionado

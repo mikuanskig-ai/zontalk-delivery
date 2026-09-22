@@ -89,7 +89,8 @@
       "accessCompany": "Acessar empresa",
       "accessCompanyStarting": "Entrando...",
       "accessCompanyFailed": "Falha ao acessar a empresa.",
-      "accessCompanyNoAdmin": "Essa empresa não tem um usuário administrador para acessar."
+      "accessCompanyNoAdmin": "Essa empresa não tem um usuário administrador para acessar.",
+      "autoExitToast": "Sessão de suporte expirada — você voltou para a sua conta."
     },
     "finance": {
       "filterFrom": "Data inicial",

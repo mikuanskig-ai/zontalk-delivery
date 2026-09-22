@@ -15,14 +15,34 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 export const RETURN_COOKIE = 'zdelivery_admin_return'
 /** Readable by the browser (just "1") so the banner knows to show. Carries no authority. */
 export const FLAG_COOKIE = 'zdelivery_imp'
-/** How long the "return to admin" ticket lives. */
+/**
+ * Hard cap on the signed ticket itself — once this passes, the
+ * signature goes invalid and `adminEmail` can no longer be recovered
+ * at all, so the ONLY way back is signing out and back in with the
+ * admin's own password. Kept generous on purpose: the real, normal
+ * way an impersonation session ends is the automatic timeout below,
+ * which fires with the ticket still comfortably valid.
+ */
 export const RETURN_MAX_AGE_SECONDS = 8 * 60 * 60
+/**
+ * How long "Acessar empresa" is allowed to run before the middleware
+ * swaps the session back to the admin automatically, even if nobody
+ * clicked "Voltar para o meu usuário" (Eder, 2026-09-22 — closing the
+ * tab and coming back later left him stuck logged in as the last
+ * company he visited, with no time-based way out).
+ */
+export const AUTO_EXIT_AFTER_MS = 30 * 60 * 1000
 
 export interface ReturnPayload {
   adminUserId: string
   adminEmail: string
   targetUserId: string
   accountId: string
+  /** epoch ms — when this "Acessar empresa" visit began. Drives the
+   *  auto-exit timeout, independent of `exp` (the ticket's own signed
+   *  lifetime, which stays valid well past this so the auto-exit can
+   *  still read `adminEmail` from it when the timeout fires). */
+  startedAt: number
   /** epoch ms */
   exp: number
 }
@@ -57,6 +77,7 @@ export function verifyReturnToken(token: string | undefined, secret: string, now
       typeof payload.adminEmail !== 'string' ||
       typeof payload.targetUserId !== 'string' ||
       typeof payload.accountId !== 'string' ||
+      typeof payload.startedAt !== 'number' ||
       typeof payload.exp !== 'number'
     ) {
       return null
@@ -65,6 +86,11 @@ export function verifyReturnToken(token: string | undefined, secret: string, now
   } catch {
     return null
   }
+}
+
+/** Pure — has this visit run past the auto-exit timeout? */
+export function isAutoExitDue(ticket: Pick<ReturnPayload, 'startedAt'>, now: number = Date.now()): boolean {
+  return now - ticket.startedAt >= AUTO_EXIT_AFTER_MS
 }
 
 interface MemberRow {

@@ -149,6 +149,23 @@
 
 ## Feitas
 
+### 2026-09-22 — "Acessar empresa" sai sozinho depois de 30min (v0.35.2)
+
+Achado real do Eder no dia seguinte ao lançamento do login de verdade
+(v0.35.0): fechar o navegador durante um "Acessar empresa" e voltar
+depois deixava a sessão presa na última empresa acessada, sem nenhum
+jeito automático de sair de volta pro admin. `ReturnPayload` ganhou
+`startedAt`; `AUTO_EXIT_AFTER_MS` (30min, `login-as.ts`) define o
+prazo. O `middleware.ts` (agora `runtime: 'nodejs'` — precisa de
+`node:crypto` pra verificar a assinatura do ticket) checa em toda
+navegação de página (nunca em chamada de API, pra não interceptar um
+fetch em andamento) se o prazo estourou e, se sim, redireciona pra um
+novo `GET /api/admin/impersonate/exit` que faz a troca de sessão de
+volta e manda pro `/admin` com um toast "Sessão de suporte expirada".
+Testado ao vivo em `npm start` local com um ticket forjado (mesma
+`ENCRYPTION_KEY` do `.env.local`) — confirma que a verificação HMAC
+roda de verdade sob `next start`, não só no build.
+
 ### 2026-09-22 — Saldo da OpenRouter na aba Uso (v0.35.1)
 
 Pedido do Eder depois de eu diagnosticar o incidente da Alzira (ver

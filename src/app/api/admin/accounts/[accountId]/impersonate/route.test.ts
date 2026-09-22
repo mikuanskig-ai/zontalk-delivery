@@ -101,6 +101,8 @@ describe('POST /api/admin/accounts/[id]/impersonate', () => {
       targetUserId: 'owner-1',
       accountId: 'acc-1',
     })
+    expect(ticket!.startedAt).toBeGreaterThan(0)
+    expect(ticket!.exp).toBeGreaterThan(ticket!.startedAt)
     expect(ticketCall[2]).toMatchObject({ httpOnly: true, secure: true })
     expect(h.cookieSet.mock.calls.find((c) => c[0] === FLAG_COOKIE)![2]).toMatchObject({ httpOnly: false })
 

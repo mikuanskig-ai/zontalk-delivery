@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { pickTargetMember, signReturnToken, verifyReturnToken, type ReturnPayload } from './login-as'
+import {
+  AUTO_EXIT_AFTER_MS,
+  isAutoExitDue,
+  pickTargetMember,
+  signReturnToken,
+  verifyReturnToken,
+  type ReturnPayload,
+} from './login-as'
 
 const SECRET = 'test-secret-value'
 const NOW = 1_800_000_000_000
@@ -8,6 +15,7 @@ const payload = (over: Partial<ReturnPayload> = {}): ReturnPayload => ({
   adminEmail: 'admin@zontalk.shop',
   targetUserId: 'owner-1',
   accountId: 'acc-1',
+  startedAt: NOW,
   exp: NOW + 60_000,
   ...over,
 })
@@ -46,6 +54,27 @@ describe('return ticket signing', () => {
   it('refuses to sign or verify without a secret', () => {
     expect(() => signReturnToken(payload(), '')).toThrow()
     expect(verifyReturnToken(signReturnToken(payload(), SECRET), '', NOW)).toBeNull()
+  })
+
+  it('rejects a payload missing startedAt (older ticket shape), even correctly signed', () => {
+    const withoutStartedAt: Partial<ReturnPayload> = payload()
+    delete withoutStartedAt.startedAt
+    const token = signReturnToken(withoutStartedAt as ReturnPayload, SECRET)
+    expect(verifyReturnToken(token, SECRET, NOW)).toBeNull()
+  })
+})
+
+describe('isAutoExitDue', () => {
+  it('is false right after the visit starts', () => {
+    expect(isAutoExitDue({ startedAt: NOW }, NOW)).toBe(false)
+  })
+
+  it('is false just under the timeout', () => {
+    expect(isAutoExitDue({ startedAt: NOW }, NOW + AUTO_EXIT_AFTER_MS - 1)).toBe(false)
+  })
+
+  it('is true once the timeout has fully elapsed', () => {
+    expect(isAutoExitDue({ startedAt: NOW }, NOW + AUTO_EXIT_AFTER_MS)).toBe(true)
   })
 })
 

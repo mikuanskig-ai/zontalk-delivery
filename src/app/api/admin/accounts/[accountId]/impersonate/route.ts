@@ -90,6 +90,7 @@ export async function POST(
     // stuck logged in as the company's user with no way back. A failed
     // swap clears it again.
     const jar = await cookies()
+    const startedAt = Date.now()
     jar.set(
       RETURN_COOKIE,
       signReturnToken(
@@ -98,7 +99,8 @@ export async function POST(
           adminEmail,
           targetUserId,
           accountId,
-          exp: Date.now() + RETURN_MAX_AGE_SECONDS * 1000,
+          startedAt,
+          exp: startedAt + RETURN_MAX_AGE_SECONDS * 1000,
         },
         secret,
       ),

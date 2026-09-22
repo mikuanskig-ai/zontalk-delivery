@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Loader2, ShieldCheck, LayoutDashboard, Building2, Wallet, CreditCard } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -48,6 +49,18 @@ function AdminPageInner() {
     if (profileLoading) return;
     if (!isPlatformAdmin) router.replace("/dashboard");
   }, [isPlatformAdmin, profileLoading, router]);
+
+  // Landed here from the middleware's automatic "Acessar empresa" timeout
+  // (login-as.ts — AUTO_EXIT_AFTER_MS), not a manual "Voltar". Strip the
+  // marker from the URL so a refresh doesn't toast again.
+  useEffect(() => {
+    if (searchParams.get("auto_exit") !== "1") return;
+    toast.info(t("autoExitToast"));
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("auto_exit");
+    router.replace(params.size ? `/admin?${params.toString()}` : "/admin", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const go = (next: Tab) => {
     setTab(next);

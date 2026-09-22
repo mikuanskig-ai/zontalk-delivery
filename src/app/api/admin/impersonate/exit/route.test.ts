@@ -18,7 +18,7 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-import { POST } from './route'
+import { POST, GET } from './route'
 import { signReturnToken, RETURN_COOKIE, FLAG_COOKIE } from '@/lib/auth/login-as'
 
 const SECRET = 'b'.repeat(64)
@@ -59,6 +59,7 @@ const validTicket = (over: Record<string, unknown> = {}) =>
       adminEmail: 'admin@zontalk.shop',
       targetUserId: 'owner-1',
       accountId: 'acc-1',
+      startedAt: Date.now(),
       exp: Date.now() + 60_000,
       ...over,
     },
@@ -87,7 +88,7 @@ describe('POST /api/admin/impersonate/exit', () => {
     h.jar.set(
       RETURN_COOKIE,
       signReturnToken(
-        { adminUserId: 'admin-1', adminEmail: 'x', targetUserId: 'owner-1', accountId: 'acc-1', exp: Date.now() + 60_000 },
+        { adminUserId: 'admin-1', adminEmail: 'x', targetUserId: 'owner-1', accountId: 'acc-1', startedAt: Date.now(), exp: Date.now() + 60_000 },
         'wrong-secret',
       ),
     )
@@ -134,6 +135,46 @@ describe('POST /api/admin/impersonate/exit', () => {
     const res = await POST()
     expect(res.status).toBe(502)
     expect(h.cookieSet).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+})
+
+const get = (search = '') => GET(new Request(`http://localhost/api/admin/impersonate/exit${search}`))
+
+describe('GET /api/admin/impersonate/exit — the middleware auto-timeout redirect', () => {
+  it('swaps back and redirects to /admin?auto_exit=1 on success', async () => {
+    h.db = fakeDb().db
+    h.jar.set(RETURN_COOKIE, validTicket())
+    const res = await get()
+    expect(res.status).toBe(307)
+    expect(res.headers.get('location')).toBe('http://localhost/admin?auto_exit=1')
+    expect(h.switchSessionTo).toHaveBeenCalledWith('admin@zontalk.shop')
+  })
+
+  it('redirects to /login when the ticket is unrecoverable', async () => {
+    h.db = fakeDb().db
+    const res = await get()
+    expect(res.headers.get('location')).toBe('http://localhost/login')
+    expect(h.switchSessionTo).not.toHaveBeenCalled()
+  })
+
+  it('falls back to ?next= (or /dashboard) — not /login — on a recoverable failure, so a retry via the banner is still possible', async () => {
+    h.db = fakeDb().db
+    h.jar.set(RETURN_COOKIE, validTicket())
+    h.switchSessionTo.mockResolvedValue({ ok: false, error: 'boom' })
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await get('?next=%2Fdelivery%2Fpedidos')
+    expect(res.headers.get('location')).toBe('http://localhost/delivery/pedidos')
+    spy.mockRestore()
+  })
+
+  it('ignores an off-site ?next= and falls back to /dashboard', async () => {
+    h.db = fakeDb().db
+    h.jar.set(RETURN_COOKIE, validTicket())
+    h.switchSessionTo.mockResolvedValue({ ok: false, error: 'boom' })
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await get('?next=https%3A%2F%2Fevil.example.com')
+    expect(res.headers.get('location')).toBe('http://localhost/dashboard')
     spy.mockRestore()
   })
 })

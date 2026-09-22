@@ -89,7 +89,8 @@
       "accessCompany": "Access company",
       "accessCompanyStarting": "Entering...",
       "accessCompanyFailed": "Failed to access the company.",
-      "accessCompanyNoAdmin": "This company has no admin user to sign in as."
+      "accessCompanyNoAdmin": "This company has no admin user to sign in as.",
+      "autoExitToast": "Support session expired — you're back on your own account."
     },
     "finance": {
       "filterFrom": "Start date",

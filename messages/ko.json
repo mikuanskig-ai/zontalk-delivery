@@ -89,7 +89,8 @@
       "accessCompany": "회사 접속",
       "accessCompanyStarting": "입장 중...",
       "accessCompanyFailed": "회사 접속에 실패했습니다.",
-      "accessCompanyNoAdmin": "이 회사에는 로그인할 관리자 사용자가 없습니다."
+      "accessCompanyNoAdmin": "이 회사에는 로그인할 관리자 사용자가 없습니다.",
+      "autoExitToast": "지원 세션이 만료되어 내 계정으로 돌아왔습니다."
     },
     "finance": {
       "filterFrom": "시작일",
