@@ -2,6 +2,20 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.35.1] — 2026-09-22
+
+### Adicionado
+
+- **Saldo da OpenRouter na aba "Uso" de Agentes de IA.** Contas que usam a
+  OpenRouter como provedor agora veem, direto no card de uso, quanto de
+  crédito ainda resta na própria chave (consultado ao vivo na API da
+  OpenRouter) — com aviso visual quando o saldo está baixo (< US$5) ou
+  crítico (< US$1). Motivado por um caso real: a IA da Concórdia parou de
+  responder por ~5 minutos numa cliente porque o crédito da conta OpenRouter
+  acabou (erro 402), e isso só foi descoberto olhando o log do servidor. Sem
+  crédito configurado ou provedor diferente de OpenRouter, o card simplesmente
+  não aparece.
+
 ## [0.35.0] — 2026-09-21
 
 ### Alterado

@@ -121,6 +121,25 @@
   texto livre já existe; poderia ganhar export CSV. Aba Planos não
   tem exclusão definitiva (intencional — fatura/conta referenciam o
   plano).
+- [ ] **Incidente 22/09: IA parada ~5min na Concórdia por falta de
+  crédito na OpenRouter** — 32 contatos novos vs. só 5 convertidos no
+  dia foi investigado a pedido do Eder; nenhum bug de funil encontrado
+  (a definição de "clientes que pediram" da migration 082 conta
+  qualquer cliente, não só os novos do dia — a maioria dos 30 que não
+  converteram simplesmente abandonou o fluxo de pedido no meio, ex:
+  nunca deu endereço/pagamento, ou parou no resumo sem confirmar).
+  Só durante essa investigação, achado à parte nos logs: entre 11:32 e
+  11:43 a IA parou de responder em TODAS as contas com erro 402 da
+  OpenRouter (`This request would exceed your available credits` /
+  `Prompt tokens limit exceeded`) — a conversa da cliente Alzira Y.
+  Oliveira ficou sem resposta por ~3min até um humano notar e mandar o
+  Pix na mão. Causa: crédito da chave OpenRouter da Concórdia esgotou.
+  Mitigação parcial entregue (v0.35.1): card de saldo OpenRouter ao
+  vivo na aba Uso de Agentes de IA, com aviso visual quando baixo/
+  crítico — mas ainda depende de alguém abrir a tela e olhar. Seria
+  reforçado pelo painel "Saúde da IA" (item acima) com um alerta
+  proativo (push/e-mail) quando o saldo cruzar o limiar crítico, em
+  vez de só mostrar quando alguém entra na tela.
 - [ ] **16 pedidos `ai_chat` da Concórdia com `conversation_id` nulo**
   (achado em 14/08 investigando a reclamação de impressão/cálculo,
   span 06/08 a 13/08) — provavelmente conversa apagada depois
@@ -129,6 +148,16 @@
   não é sintoma de algo pior.
 
 ## Feitas
+
+### 2026-09-22 — Saldo da OpenRouter na aba Uso (v0.35.1)
+
+Pedido do Eder depois de eu diagnosticar o incidente da Alzira (ver
+Pendentes): mostrar quanto de crédito resta na chave OpenRouter da
+conta, direto na tela onde já se vê o uso de tokens. `GET
+https://openrouter.ai/api/v1/key` (best-effort, nunca derruba a rota
+se falhar) alimenta um card na aba Uso de Agentes de IA com aviso
+visual em amarelo (< US$5) e vermelho (< US$1). Só aparece pra contas
+no provedor OpenRouter com chave configurada.
 
 ### 2026-09-21 — "Acessar empresa" vira login de verdade como o admin da empresa (v0.35.0)
 

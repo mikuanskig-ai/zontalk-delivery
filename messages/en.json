@@ -2959,7 +2959,11 @@
       "call": "call",
       "calls": "calls",
       "truncated": "Showing a partial window — usage is high enough that only the most recent records are summarized here.",
-      "loadFailed": "Failed to load usage"
+      "loadFailed": "Failed to load usage",
+      "openrouterBalance": "OpenRouter balance",
+      "openrouterUnlimited": "No cap set on this key",
+      "openrouterBalanceLowHint": "Balance is nearly gone — the AI could stop responding at any moment. Add credits on OpenRouter.",
+      "openrouterBalanceWarnHint": "Balance is low — worth topping up soon to avoid an AI outage."
     }
   },
   "NotificationsPage": {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { BarChart3, Bot, PencilLine, Coins } from 'lucide-react';
+import { BarChart3, Bot, PencilLine, Coins, AlertTriangle, Wallet } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
 import {
@@ -50,6 +50,13 @@ interface UsageResponse {
     estimated_cost_brl: number | null;
   }[];
   daily: { date: string; tokens: number; calls: number }[];
+  provider_balance: {
+    provider: 'openrouter';
+    limit: number | null;
+    limit_remaining: number | null;
+    usage: number;
+    is_free_tier: boolean;
+  } | null;
 }
 
 const WINDOWS = [7, 30, 90] as const;
@@ -65,6 +72,19 @@ function formatCostBRL(value: number): string {
     currency: 'BRL',
   }).format(value);
 }
+
+// OpenRouter's own unit (1 credit = US$1), regardless of the account's
+// deal currency or the pt-BR locale used for the cost estimate above —
+// this number comes straight from their API, not converted.
+function formatCreditsUSD(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(value);
+}
+
+const LOW_BALANCE_THRESHOLD = 1;
+const WARN_BALANCE_THRESHOLD = 5;
 
 /**
  * Token-spend dashboard for the account's BYO key. Admin-only (spend is
@@ -146,6 +166,7 @@ export function AiUsageCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
+        {!loading && data?.provider_balance && <OpenRouterBalanceCard balance={data.provider_balance} />}
         {loading || !data ? (
           <Skeleton className="h-[220px] w-full" />
         ) : !hasSpend ? (
@@ -246,6 +267,67 @@ export function AiUsageCard() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function OpenRouterBalanceCard({
+  balance,
+}: {
+  balance: NonNullable<UsageResponse['provider_balance']>;
+}) {
+  const t = useTranslations('AgentsPage.usage');
+  const { limit_remaining: remaining } = balance;
+
+  // A null limit_remaining means "unlimited/no cap set on this key" on
+  // OpenRouter's side — not "unknown" — so there's nothing to warn about.
+  if (remaining === null) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-4">
+        <Wallet className="h-6 w-6 shrink-0 text-muted-foreground" />
+        <div>
+          <p className="text-xs text-muted-foreground">{t('openrouterBalance')}</p>
+          <p className="text-sm font-medium text-foreground">{t('openrouterUnlimited')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isLow = remaining < LOW_BALANCE_THRESHOLD;
+  const isWarn = !isLow && remaining < WARN_BALANCE_THRESHOLD;
+
+  return (
+    <div
+      className={
+        isLow
+          ? 'flex items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4'
+          : isWarn
+            ? 'flex items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4'
+            : 'flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-4'
+      }
+    >
+      {isLow || isWarn ? (
+        <AlertTriangle
+          className={`h-6 w-6 shrink-0 ${isLow ? 'text-destructive' : 'text-amber-600'}`}
+        />
+      ) : (
+        <Wallet className="h-6 w-6 shrink-0 text-muted-foreground" />
+      )}
+      <div>
+        <p className="text-xs text-muted-foreground">{t('openrouterBalance')}</p>
+        <p
+          className={`text-2xl font-semibold tabular-nums ${
+            isLow ? 'text-destructive' : isWarn ? 'text-amber-600' : 'text-foreground'
+          }`}
+        >
+          {formatCreditsUSD(remaining)}
+        </p>
+      </div>
+      {(isLow || isWarn) && (
+        <p className="ml-auto max-w-[22ch] text-xs text-muted-foreground">
+          {isLow ? t('openrouterBalanceLowHint') : t('openrouterBalanceWarnHint')}
+        </p>
+      )}
+    </div>
   );
 }
 

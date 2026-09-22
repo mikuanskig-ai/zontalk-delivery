@@ -2959,7 +2959,11 @@
       "call": "chamada",
       "calls": "chamadas",
       "truncated": "Mostrando uma janela parcial — o uso está alto o suficiente pra só os registros mais recentes serem resumidos aqui.",
-      "loadFailed": "Falha ao carregar o uso"
+      "loadFailed": "Falha ao carregar o uso",
+      "openrouterBalance": "Saldo na OpenRouter",
+      "openrouterUnlimited": "Sem limite configurado nesta chave",
+      "openrouterBalanceLowHint": "Saldo quase zerado — a IA pode parar de responder a qualquer momento. Adicione créditos na OpenRouter.",
+      "openrouterBalanceWarnHint": "Saldo baixo — vale recarregar em breve para não parar a IA."
     }
   },
   "NotificationsPage": {

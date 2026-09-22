@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { daysAgoStart, lastNDayKeys, localDayKey } from '@/lib/dashboard/date-utils'
 import { estimateCostUsd, usdToBrl } from '@/lib/ai/pricing'
+import { loadAiConfig } from '@/lib/ai/config'
+import { getOpenRouterBalance } from '@/lib/ai/providers/openrouter'
 
 // Rows are aggregated in-process over a bounded window. An active
 // account writes a handful of rows per conversation, so 30 days sits
@@ -155,6 +157,34 @@ export async function GET(request: Request) {
         }
       })
 
+    // Live credit balance on the account's own OpenRouter key — only
+    // meaningful for that one provider, and best-effort: a slow/failed
+    // OpenRouter call must never take down the usage page itself.
+    let providerBalance: {
+      provider: 'openrouter'
+      limit: number | null
+      limit_remaining: number | null
+      usage: number
+      is_free_tier: boolean
+    } | null = null
+    try {
+      const config = await loadAiConfig(supabase, accountId, { requireActive: false })
+      if (config?.provider === 'openrouter' && config.apiKey) {
+        const balance = await getOpenRouterBalance(config.apiKey)
+        if (balance) {
+          providerBalance = {
+            provider: 'openrouter',
+            limit: balance.limit,
+            limit_remaining: balance.limitRemaining,
+            usage: balance.usage,
+            is_free_tier: balance.isFreeTier,
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[ai/usage GET] provider balance lookup failed:', err)
+    }
+
     return NextResponse.json({
       window_days: days,
       truncated,
@@ -169,6 +199,7 @@ export async function GET(request: Request) {
       by_mode: byMode,
       by_model: byModel,
       daily: [...daily.values()],
+      provider_balance: providerBalance,
     })
   } catch (err) {
     return toErrorResponse(err)
