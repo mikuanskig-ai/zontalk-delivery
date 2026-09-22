@@ -1,20 +1,33 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { FLAG_COOKIE, RETURN_COOKIE, isAutoExitDue, verifyReturnToken } from '@/lib/auth/login-as'
+import {
+  FLAG_COOKIE,
+  RETURN_COOKIE,
+  RETURN_MAX_AGE_SECONDS,
+  isAutoExitDue,
+  renewTicket,
+  signReturnToken,
+  verifyReturnToken,
+} from '@/lib/auth/login-as'
 
-// node:crypto (used to verify the signed return-ticket cookie below)
+// node:crypto (used to verify/re-sign the return-ticket cookie below)
 // needs the Node middleware runtime, not the default edge one.
 export const runtime = 'nodejs'
 
 export async function middleware(request: NextRequest) {
-  // "Acessar empresa" auto-timeout (Eder, 2026-09-22): closing the tab
-  // and coming back later left an admin stuck logged in as whatever
-  // company they last visited, with no time-based way out. Checked on
-  // every plain page navigation (not API calls, so an in-flight fetch
-  // never gets redirected instead of its expected JSON) before any
-  // other routing below — a stale ticket or one past AUTO_EXIT_AFTER_MS
-  // sends the browser to the exit route, which swaps the session back
-  // to the admin and redirects into /admin.
+  // "Acessar empresa" auto-timeout, IDLE-based (Eder, 2026-09-22, fixed
+  // again 2026-09-23): checked on every plain page navigation (not API
+  // calls, so an in-flight fetch never gets redirected instead of its
+  // expected JSON). A missing/expired ticket, or one idle past
+  // AUTO_EXIT_AFTER_MS, sends the browser to the exit route, which
+  // swaps the session back to the admin. Otherwise the ticket's
+  // `lastActiveAt` is renewed right here (carried onto whatever
+  // response this request ends up returning, below) — a v1 that
+  // measured from the VISIT START instead of last activity cut an
+  // admin's genuinely active session off mid-task at the 30-minute
+  // mark, which is exactly the "desloga sozinho" complaint this exists
+  // to prevent, not cause.
+  let renewedTicketCookie: string | null = null
   if (
     request.method === 'GET' &&
     !request.nextUrl.pathname.startsWith('/api/') &&
@@ -30,6 +43,7 @@ export async function middleware(request: NextRequest) {
       url.search = `?next=${next}`
       return NextResponse.redirect(url)
     }
+    renewedTicketCookie = signReturnToken(renewTicket(ticket), secret)
   }
 
   let supabaseResponse = NextResponse.next({ request })
@@ -69,6 +83,15 @@ export async function middleware(request: NextRequest) {
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       response.cookies.set(cookie)
     })
+    if (renewedTicketCookie) {
+      response.cookies.set(RETURN_COOKIE, renewedTicketCookie, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: RETURN_MAX_AGE_SECONDS,
+      })
+    }
     return response
   }
 
@@ -131,7 +154,7 @@ export async function middleware(request: NextRequest) {
     )
   }
 
-  return supabaseResponse
+  return withRefreshedCookies(supabaseResponse)
 }
 
 export const config = {

@@ -143,7 +143,7 @@ describe("middleware — 'Acessar empresa' auto-exit timeout (2026-09-22)", () =
         adminEmail: "admin@zontalk.shop",
         targetUserId: "owner-1",
         accountId: "acc-1",
-        startedAt: NOW,
+        lastActiveAt: NOW,
         exp: NOW + 8 * 60 * 60 * 1000,
         ...overrides,
       } as never,
@@ -168,6 +168,35 @@ describe("middleware — 'Acessar empresa' auto-exit timeout (2026-09-22)", () =
       }),
     );
     expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("renews the ticket (idle clock resets) on a normal page navigation — active work is never cut off mid-task", async () => {
+    const { verifyReturnToken } = await import("@/lib/auth/login-as");
+    const ticket = await signTicket();
+    // 25 minutes in — still under the 30-minute idle timeout, but this is
+    // exactly the case the fixed-from-start version got wrong.
+    vi.setSystemTime(NOW + 25 * 60 * 1000);
+    const res = await middleware(
+      new NextRequest("https://app.test/inbox", {
+        headers: { cookie: `zdelivery_imp=1; zdelivery_admin_return=${ticket}` },
+      }),
+    );
+    expect(res.headers.get("location")).toBeNull();
+    const renewed = res.cookies.get("zdelivery_admin_return")?.value;
+    expect(renewed).toBeDefined();
+    const payload = verifyReturnToken(renewed, SECRET, NOW + 25 * 60 * 1000);
+    expect(payload?.lastActiveAt).toBe(NOW + 25 * 60 * 1000);
+
+    // A second request, another 25 minutes later (50 min after the visit
+    // began — well past a FIXED 30-min-from-start cap) still passes
+    // through, because activity at the 25-min mark reset the idle clock.
+    vi.setSystemTime(NOW + 50 * 60 * 1000);
+    const res2 = await middleware(
+      new NextRequest("https://app.test/inbox", {
+        headers: { cookie: `zdelivery_imp=1; zdelivery_admin_return=${renewed}` },
+      }),
+    );
+    expect(res2.headers.get("location")).toBeNull();
   });
 
   it("redirects to the auto-exit route once AUTO_EXIT_AFTER_MS has elapsed", async () => {

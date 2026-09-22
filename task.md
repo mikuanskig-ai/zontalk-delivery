@@ -149,6 +149,42 @@
 
 ## Feitas
 
+### 2026-09-22 — Auto-exit vira idle timeout + storage 500 corrigido (v0.36.1)
+
+Dois achados do Eder no mesmo print (console do navegador): erros 500 do
+Supabase Storage e "quando acesso a empresa pelo admin desloga do outro
+lado". Investigados os dois:
+
+**Storage 500** — confirmado real, `docker logs supabase-storage`: todo
+GET de mídia falhava com `ENODATA`/"The extended attribute does not
+exist." O backend local do storage grava `content-type`/`cache-control`
+como xattr do arquivo; a cópia da VPS antiga pra essa (rsync/scp, sem
+preservar xattrs) apagou esse metadado de 6.634 dos 6.847 arquivos —
+praticamente tudo que não foi enviado nos últimos dias. Corrigido com um
+script (`scratch/fix-storage-xattrs.sh`, não versionado — one-off de
+infra) que reconstrói os dois xattrs a partir da extensão de cada
+arquivo. Confirmado ao vivo (antes/depois, jpg/ogg/pdf) contra
+`https://v2.zontalk.shop/supabase/storage/v1/object/public/...` — a URL
+real que o app usa (`getPublicUrl`), não o path interno.
+
+**"Desloga sozinho"** — na real, é o auto-exit de 30min do dia anterior
+(v0.35.2) funcionando como especificado, só que especificado errado: ele
+contava a partir do `startedAt` (início da visita), não da última
+atividade. Confirmei batendo os logs (`admin_login_as_log`) contra
+`auth.sessions` — o gap de 31min entre duas entradas batia exatamente
+com `AUTO_EXIT_AFTER_MS`, ou seja: uma sessão de suporte ativa por mais
+de 30min era derrubada no meio do trabalho. `ReturnPayload.startedAt`
+virou `lastActiveAt`; o middleware agora RENOVA o ticket (novo
+`renewTicket()`, re-assinado e regravado no cookie) em toda navegação de
+página que passa no cheque, em vez de só verificar. Testado ao vivo
+contra `npm start` com tickets forjados de 29min e 31min de
+inatividade — 29 passa e renova, 31 redireciona.
+
+Nota de deploy: quem estava com uma sessão "Acessar empresa" aberta no
+momento do deploy foi deslogado uma vez (o formato do ticket mudou de
+`startedAt` pra `lastActiveAt`) — precisou entrar de novo com a senha de
+admin. Esperado, único, não se repete.
+
 ### 2026-09-22 — Menu de ações + excluir empresa no `/admin` (v0.36.0)
 
 Pedido do Eder olhando o print da lista de Empresas: os dois ícones soltos

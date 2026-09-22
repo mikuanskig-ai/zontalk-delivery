@@ -25,11 +25,18 @@ export const FLAG_COOKIE = 'zdelivery_imp'
  */
 export const RETURN_MAX_AGE_SECONDS = 8 * 60 * 60
 /**
- * How long "Acessar empresa" is allowed to run before the middleware
- * swaps the session back to the admin automatically, even if nobody
- * clicked "Voltar para o meu usuário" (Eder, 2026-09-22 — closing the
- * tab and coming back later left him stuck logged in as the last
- * company he visited, with no time-based way out).
+ * How long "Acessar empresa" can sit IDLE before the middleware swaps
+ * the session back to the admin automatically, even if nobody clicked
+ * "Voltar para o meu usuário" (Eder, 2026-09-22 — closing the tab and
+ * coming back later left him stuck logged in as the last company he
+ * visited, with no time-based way out).
+ *
+ * Idle, not absolute: `lastActiveAt` is renewed on every qualifying
+ * page navigation (see middleware.ts), so continuous, active support
+ * work of any length never gets cut off mid-task — only really
+ * stepping away for this long does. The first cut of this (v0.35.2)
+ * used a fixed 30-min-from-start timer instead, which is exactly what
+ * ended an active session out from under Eder the next day.
  */
 export const AUTO_EXIT_AFTER_MS = 30 * 60 * 1000
 
@@ -38,11 +45,11 @@ export interface ReturnPayload {
   adminEmail: string
   targetUserId: string
   accountId: string
-  /** epoch ms — when this "Acessar empresa" visit began. Drives the
-   *  auto-exit timeout, independent of `exp` (the ticket's own signed
-   *  lifetime, which stays valid well past this so the auto-exit can
-   *  still read `adminEmail` from it when the timeout fires). */
-  startedAt: number
+  /** epoch ms — renewed on every qualifying page navigation while
+   *  impersonating (middleware.ts). Drives the idle auto-exit timeout,
+   *  independent of `exp` (the ticket's own signed lifetime, an
+   *  absolute cap that is NOT renewed — see RETURN_MAX_AGE_SECONDS). */
+  lastActiveAt: number
   /** epoch ms */
   exp: number
 }
@@ -77,7 +84,7 @@ export function verifyReturnToken(token: string | undefined, secret: string, now
       typeof payload.adminEmail !== 'string' ||
       typeof payload.targetUserId !== 'string' ||
       typeof payload.accountId !== 'string' ||
-      typeof payload.startedAt !== 'number' ||
+      typeof payload.lastActiveAt !== 'number' ||
       typeof payload.exp !== 'number'
     ) {
       return null
@@ -88,9 +95,14 @@ export function verifyReturnToken(token: string | undefined, secret: string, now
   }
 }
 
-/** Pure — has this visit run past the auto-exit timeout? */
-export function isAutoExitDue(ticket: Pick<ReturnPayload, 'startedAt'>, now: number = Date.now()): boolean {
-  return now - ticket.startedAt >= AUTO_EXIT_AFTER_MS
+/** Pure — has this visit sat idle past the auto-exit timeout? */
+export function isAutoExitDue(ticket: Pick<ReturnPayload, 'lastActiveAt'>, now: number = Date.now()): boolean {
+  return now - ticket.lastActiveAt >= AUTO_EXIT_AFTER_MS
+}
+
+/** Pure — a renewed ticket with `lastActiveAt` bumped to `now`, everything else unchanged. */
+export function renewTicket(ticket: ReturnPayload, now: number = Date.now()): ReturnPayload {
+  return { ...ticket, lastActiveAt: now }
 }
 
 interface MemberRow {

@@ -3,6 +3,7 @@ import {
   AUTO_EXIT_AFTER_MS,
   isAutoExitDue,
   pickTargetMember,
+  renewTicket,
   signReturnToken,
   verifyReturnToken,
   type ReturnPayload,
@@ -15,7 +16,7 @@ const payload = (over: Partial<ReturnPayload> = {}): ReturnPayload => ({
   adminEmail: 'admin@zontalk.shop',
   targetUserId: 'owner-1',
   accountId: 'acc-1',
-  startedAt: NOW,
+  lastActiveAt: NOW,
   exp: NOW + 60_000,
   ...over,
 })
@@ -56,25 +57,40 @@ describe('return ticket signing', () => {
     expect(verifyReturnToken(signReturnToken(payload(), SECRET), '', NOW)).toBeNull()
   })
 
-  it('rejects a payload missing startedAt (older ticket shape), even correctly signed', () => {
-    const withoutStartedAt: Partial<ReturnPayload> = payload()
-    delete withoutStartedAt.startedAt
-    const token = signReturnToken(withoutStartedAt as ReturnPayload, SECRET)
+  it('rejects a payload missing lastActiveAt (older ticket shape), even correctly signed', () => {
+    const withoutLastActiveAt: Partial<ReturnPayload> = payload()
+    delete withoutLastActiveAt.lastActiveAt
+    const token = signReturnToken(withoutLastActiveAt as ReturnPayload, SECRET)
     expect(verifyReturnToken(token, SECRET, NOW)).toBeNull()
   })
 })
 
 describe('isAutoExitDue', () => {
   it('is false right after the visit starts', () => {
-    expect(isAutoExitDue({ startedAt: NOW }, NOW)).toBe(false)
+    expect(isAutoExitDue({ lastActiveAt: NOW }, NOW)).toBe(false)
   })
 
   it('is false just under the timeout', () => {
-    expect(isAutoExitDue({ startedAt: NOW }, NOW + AUTO_EXIT_AFTER_MS - 1)).toBe(false)
+    expect(isAutoExitDue({ lastActiveAt: NOW }, NOW + AUTO_EXIT_AFTER_MS - 1)).toBe(false)
   })
 
   it('is true once the timeout has fully elapsed', () => {
-    expect(isAutoExitDue({ startedAt: NOW }, NOW + AUTO_EXIT_AFTER_MS)).toBe(true)
+    expect(isAutoExitDue({ lastActiveAt: NOW }, NOW + AUTO_EXIT_AFTER_MS)).toBe(true)
+  })
+})
+
+describe('renewTicket', () => {
+  it('bumps lastActiveAt to now and leaves everything else, including exp, untouched', () => {
+    const ticket = payload({ lastActiveAt: NOW - 10_000 })
+    const renewed = renewTicket(ticket, NOW)
+    expect(renewed).toEqual({ ...ticket, lastActiveAt: NOW })
+  })
+
+  it('resets the idle clock — a renewed ticket is no longer due right after the old one was', () => {
+    const ticket = payload({ lastActiveAt: NOW })
+    const renewed = renewTicket(ticket, NOW + AUTO_EXIT_AFTER_MS - 1)
+    expect(isAutoExitDue(renewed, NOW + AUTO_EXIT_AFTER_MS - 1)).toBe(false)
+    expect(isAutoExitDue(renewed, NOW + AUTO_EXIT_AFTER_MS * 2)).toBe(true)
   })
 })
 

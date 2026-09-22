@@ -59,7 +59,7 @@ const validTicket = (over: Record<string, unknown> = {}) =>
       adminEmail: 'admin@zontalk.shop',
       targetUserId: 'owner-1',
       accountId: 'acc-1',
-      startedAt: Date.now(),
+      lastActiveAt: Date.now(),
       exp: Date.now() + 60_000,
       ...over,
     },
@@ -88,7 +88,7 @@ describe('POST /api/admin/impersonate/exit', () => {
     h.jar.set(
       RETURN_COOKIE,
       signReturnToken(
-        { adminUserId: 'admin-1', adminEmail: 'x', targetUserId: 'owner-1', accountId: 'acc-1', startedAt: Date.now(), exp: Date.now() + 60_000 },
+        { adminUserId: 'admin-1', adminEmail: 'x', targetUserId: 'owner-1', accountId: 'acc-1', lastActiveAt: Date.now(), exp: Date.now() + 60_000 },
         'wrong-secret',
       ),
     )

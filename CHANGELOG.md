@@ -2,6 +2,29 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.36.1] — 2026-09-22
+
+### Corrigido
+
+- **"Acessar empresa" não desloga mais no meio do trabalho.** O auto-exit de
+  30min lançado ontem (v0.35.2) contava o tempo a partir do INÍCIO da
+  visita — então uma sessão de suporte ativa de mais de 30 minutos era
+  derrubada no meio, mesmo com o admin clicando em coisas o tempo todo.
+  Agora o prazo é de **inatividade**: cada navegação de página renova o
+  relógio, então só desloga sozinho quem realmente ficou parado (ou fechou
+  o navegador) por 30 minutos — trabalho contínuo, de qualquer duração,
+  nunca é interrompido.
+- **Imagens/áudios/documentos antigos do WhatsApp voltaram a carregar
+  (erro 500 no Supabase Storage).** Achado numa reclamação de erros 500 no
+  console: os arquivos migrados da VPS antiga (6.634 de 6.847, quase tudo
+  que não foi enviado nos últimos dias) tinham perdido um metadado interno
+  do storage (o content-type gravado como atributo do arquivo) durante a
+  cópia entre servidores. Sem esse metadado, todo pedido pra abrir a
+  imagem/áudio/PDF falhava. Restaurado em massa a partir da extensão de
+  cada arquivo (.jpg/.jpeg/.png → imagem, .ogg/.mpeg → áudio, .pdf →
+  documento, .mp4 → vídeo) — confirmado ao vivo, nenhum arquivo com
+  extensão não reconhecida.
+
 ## [0.36.0] — 2026-09-22
 
 ### Adicionado
