@@ -149,6 +149,23 @@
 
 ## Feitas
 
+### 2026-09-22 — Menu de ações + excluir empresa no `/admin` (v0.36.0)
+
+Pedido do Eder olhando o print da lista de Empresas: os dois ícones soltos
+na coluna Ações viraram um menu (⋮ — mesmo padrão já usado em Automações)
+com Acessar empresa / Suspender-Reativar / Excluir empresa. A exclusão é
+de verdade — `DELETE FROM accounts` cascateia por toda tabela
+`account_id`-scoped (confirmado migration por migration, todas já usam
+`ON DELETE CASCADE` desde a 017). Dado o tamanho do estrago possível
+(apagar todo o histórico de uma empresa paga, sem undo), o
+`useConfirmDialog` ganhou um modo de confirmação digitada (`typedConfirmValue`)
+— o admin precisa digitar o nome exato da empresa, não só clicar
+"confirmar" — e o servidor reforça o mesmo campo (`confirm_name` no body)
+independente do que veio da UI. `admin_account_deletion_log` (migration 086,
+sem FK pra `accounts` de propósito — o registro precisa sobreviver ao que
+ele descreve) grava admin/empresa/dono ANTES de apagar; se esse insert
+falhar, a exclusão é cancelada — nunca o contrário.
+
 ### 2026-09-22 — "Acessar empresa" sai sozinho depois de 30min (v0.35.2)
 
 Achado real do Eder no dia seguinte ao lançamento do login de verdade

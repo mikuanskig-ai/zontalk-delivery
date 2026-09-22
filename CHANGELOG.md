@@ -2,6 +2,20 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.36.0] — 2026-09-22
+
+### Adicionado
+
+- **Menu de ações e exclusão de empresa no `/admin`.** A coluna "Ações" da
+  lista de empresas virou um menu (⋮) com "Acessar empresa",
+  "Suspender/Reativar" e a novidade: **Excluir empresa**. Apaga a conta e
+  tudo que é dela pra sempre — conversas, contatos, pedidos, negócios,
+  automações — sem volta. Por ser irreversível, o diálogo de confirmação
+  agora exige digitar o nome exato da empresa (não é só um "tem certeza?"),
+  e o servidor confere de novo antes de apagar. Toda exclusão fica
+  registrada em `admin_account_deletion_log` (migration 086) antes de
+  apagar — se o registro falhar, a exclusão é cancelada, nunca o contrário.
+
 ## [0.35.2] — 2026-09-22
 
 ### Corrigido

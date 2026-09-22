@@ -2,7 +2,8 @@
   "Common": {
     "cancel": "취소",
     "confirm": "확인",
-    "delete": "삭제"
+    "delete": "삭제",
+    "typedConfirmLabel": "확인하려면 \"{value}\"을(를) 입력하세요"
   },
   "LoginPage": {
     "titleAccept": "로그인하여 수락하기",
@@ -90,7 +91,13 @@
       "accessCompanyStarting": "입장 중...",
       "accessCompanyFailed": "회사 접속에 실패했습니다.",
       "accessCompanyNoAdmin": "이 회사에는 로그인할 관리자 사용자가 없습니다.",
-      "autoExitToast": "지원 세션이 만료되어 내 계정으로 돌아왔습니다."
+      "autoExitToast": "지원 세션이 만료되어 내 계정으로 돌아왔습니다.",
+      "actionsMenu": "작업 메뉴 열기",
+      "deleteAccount": "회사 삭제",
+      "deleteConfirmTitle": "{name}을(를) 삭제하시겠습니까?",
+      "deleteConfirmDesc": "이 작업은 회사와 그에 속한 모든 것(대화, 연락처, 주문, 거래, 자동화)을 영구적으로 삭제합니다. 되돌릴 수 없습니다.",
+      "deleteSuccess": "{name}이(가) 삭제되었습니다.",
+      "deleteFailed": "회사 삭제에 실패했습니다."
     },
     "finance": {
       "filterFrom": "시작일",

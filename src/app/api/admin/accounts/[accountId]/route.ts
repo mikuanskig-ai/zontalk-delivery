@@ -204,3 +204,76 @@ export async function PATCH(
     return toErrorResponse(err)
   }
 }
+
+/**
+ * DELETE /api/admin/accounts/[accountId]  (platform admin only)
+ *
+ * Permanently deletes the company and everything scoped to it —
+ * conversations, contacts, orders, deals, the works — via the
+ * `account_id ... ON DELETE CASCADE` FK every domain table carries
+ * (migration 017 onward). No undo.
+ *
+ * Body: { confirm_name: string } — must match the account's current
+ * name exactly (the UI enforces this too via a typed-confirmation
+ * dialog, but the server never trusts the client alone for something
+ * this irreversible). `admin_account_deletion_log` (086) records the
+ * deletion BEFORE the row disappears, since the log carries no FK to
+ * `accounts` on purpose — it's meant to outlive it.
+ */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ accountId: string }> },
+) {
+  try {
+    const { userId } = await requirePlatformAdmin()
+    const { accountId } = await params
+
+    const limit = checkRateLimit(`admin-account-delete:${userId}`, RATE_LIMITS.adminAction)
+    if (!limit.success) return rateLimitResponse(limit)
+
+    const body = await request.json().catch(() => null)
+    const confirmName = body && typeof body === 'object' ? body.confirm_name : undefined
+    if (typeof confirmName !== 'string' || !confirmName) {
+      return NextResponse.json({ error: 'confirm_name is required' }, { status: 400 })
+    }
+
+    const admin = supabaseAdmin()
+    const [{ data: account, error: accountErr }, { data: owner }] = await Promise.all([
+      admin.from('accounts').select('id, name').eq('id', accountId).maybeSingle(),
+      admin.from('profiles').select('email').eq('account_id', accountId).eq('account_role', 'owner').maybeSingle(),
+    ])
+    if (accountErr) {
+      console.error('[admin/accounts/[id] DELETE] account fetch error:', accountErr)
+      return NextResponse.json({ error: 'Failed to load account' }, { status: 500 })
+    }
+    if (!account) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    }
+    if (confirmName !== account.name) {
+      return NextResponse.json({ error: 'name_mismatch' }, { status: 400 })
+    }
+
+    const { error: logErr } = await admin.from('admin_account_deletion_log').insert({
+      admin_user_id: userId,
+      deleted_account_id: account.id,
+      account_name: account.name,
+      owner_email: owner?.email ?? null,
+    })
+    if (logErr) {
+      // Logging failure blocks the delete outright — a destructive,
+      // irreversible action with no audit trail is worse than a retry.
+      console.error('[admin/accounts/[id] DELETE] audit log insert failed:', logErr)
+      return NextResponse.json({ error: 'Failed to record audit log — account not deleted' }, { status: 500 })
+    }
+
+    const { error: deleteErr } = await admin.from('accounts').delete().eq('id', accountId)
+    if (deleteErr) {
+      console.error('[admin/accounts/[id] DELETE] delete error:', deleteErr)
+      return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return toErrorResponse(err)
+  }
+}

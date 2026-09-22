@@ -2,7 +2,8 @@
   "Common": {
     "cancel": "Cancelar",
     "confirm": "Confirmar",
-    "delete": "Excluir"
+    "delete": "Excluir",
+    "typedConfirmLabel": "Digite \"{value}\" para confirmar"
   },
   "LoginPage": {
     "titleAccept": "Entrar para aceitar",
@@ -90,7 +91,13 @@
       "accessCompanyStarting": "Entrando...",
       "accessCompanyFailed": "Falha ao acessar a empresa.",
       "accessCompanyNoAdmin": "Essa empresa não tem um usuário administrador para acessar.",
-      "autoExitToast": "Sessão de suporte expirada — você voltou para a sua conta."
+      "autoExitToast": "Sessão de suporte expirada — você voltou para a sua conta.",
+      "actionsMenu": "Abrir menu de ações",
+      "deleteAccount": "Excluir empresa",
+      "deleteConfirmTitle": "Excluir {name}?",
+      "deleteConfirmDesc": "Isso apaga a empresa e TUDO que pertence a ela — conversas, contatos, pedidos, negócios, automações — para sempre. Não tem como desfazer.",
+      "deleteSuccess": "{name} foi excluída.",
+      "deleteFailed": "Falha ao excluir a empresa."
     },
     "finance": {
       "filterFrom": "Data inicial",

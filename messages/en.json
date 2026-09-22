@@ -2,7 +2,8 @@
   "Common": {
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "delete": "Delete"
+    "delete": "Delete",
+    "typedConfirmLabel": "Type \"{value}\" to confirm"
   },
   "LoginPage": {
     "titleAccept": "Sign in to accept",
@@ -90,7 +91,13 @@
       "accessCompanyStarting": "Entering...",
       "accessCompanyFailed": "Failed to access the company.",
       "accessCompanyNoAdmin": "This company has no admin user to sign in as.",
-      "autoExitToast": "Support session expired — you're back on your own account."
+      "autoExitToast": "Support session expired — you're back on your own account.",
+      "actionsMenu": "Open actions menu",
+      "deleteAccount": "Delete company",
+      "deleteConfirmTitle": "Delete {name}?",
+      "deleteConfirmDesc": "This permanently erases the company and EVERYTHING that belongs to it — conversations, contacts, orders, deals, automations. There's no undo.",
+      "deleteSuccess": "{name} was deleted.",
+      "deleteFailed": "Failed to delete the company."
     },
     "finance": {
       "filterFrom": "Start date",

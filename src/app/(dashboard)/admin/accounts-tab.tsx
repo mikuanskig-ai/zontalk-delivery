@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Ban, CheckCircle2, LogIn, Loader2 } from "lucide-react";
+import { Ban, CheckCircle2, LogIn, Loader2, MoreVertical, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableHeader,
@@ -74,6 +81,7 @@ export function AdminAccountsTab() {
   const [planOptions, setPlanOptions] = useState<PlanOption[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [accessingId, setAccessingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setError(false);
@@ -107,7 +115,7 @@ export function AdminAccountsTab() {
     });
   }, [accounts, query, statusFilter, planFilter, whatsappFilter]);
 
-  async function toggleSuspend(account: AdminAccountRow, e: React.MouseEvent) {
+  async function toggleSuspend(account: AdminAccountRow, e: { stopPropagation: () => void }) {
     e.stopPropagation();
     const suspending = account.status !== "suspended";
     const ok = await confirm({
@@ -137,7 +145,7 @@ export function AdminAccountsTab() {
     }
   }
 
-  async function accessCompany(account: AdminAccountRow, e: React.MouseEvent) {
+  async function accessCompany(account: AdminAccountRow, e: { stopPropagation: () => void }) {
     e.stopPropagation();
     setAccessingId(account.id);
     try {
@@ -155,6 +163,36 @@ export function AdminAccountsTab() {
       toast.error(t("accessCompanyFailed"));
     } finally {
       setAccessingId(null);
+    }
+  }
+
+  async function deleteAccount(account: AdminAccountRow, e: { stopPropagation: () => void }) {
+    e.stopPropagation();
+    const ok = await confirm({
+      title: t("deleteConfirmTitle", { name: account.name }),
+      description: t("deleteConfirmDesc"),
+      confirmLabel: tCommon("delete"),
+      destructive: true,
+      typedConfirmValue: account.name,
+    });
+    if (!ok) return;
+    setDeletingId(account.id);
+    try {
+      const res = await fetch(`/api/admin/accounts/${account.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm_name: account.name }),
+      });
+      if (res.ok) {
+        toast.success(t("deleteSuccess", { name: account.name }));
+        load();
+      } else {
+        toast.error(t("deleteFailed"));
+      }
+    } catch {
+      toast.error(t("deleteFailed"));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -347,36 +385,40 @@ export function AdminAccountsTab() {
                       {new Date(a.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="icon-xs"
-                          variant="ghost"
-                          title={t("accessCompany")}
-                          disabled={accessingId === a.id}
-                          onClick={(e) => accessCompany(a, e)}
-                        >
-                          {accessingId === a.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <LogIn className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          size="icon-xs"
-                          variant="ghost"
-                          title={a.status === "suspended" ? tDetail("reactivateAccount") : tDetail("suspendAccount")}
-                          disabled={busyId === a.id}
-                          onClick={(e) => toggleSuspend(a, e)}
-                        >
-                          {busyId === a.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : a.status === "suspended" ? (
-                            <CheckCircle2 className="h-4 w-4" />
-                          ) : (
-                            <Ban className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
+                      {accessingId === a.id || busyId === a.id || deletingId === a.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            aria-label={t("actionsMenu")}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[popup-open]:bg-muted"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => accessCompany(a, e)}>
+                              <LogIn className="h-4 w-4" />
+                              {t("accessCompany")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => toggleSuspend(a, e)}>
+                              {a.status === "suspended" ? (
+                                <CheckCircle2 className="h-4 w-4" />
+                              ) : (
+                                <Ban className="h-4 w-4" />
+                              )}
+                              {a.status === "suspended" ? tDetail("reactivateAccount") : tDetail("suspendAccount")}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={(e) => deleteAccount(a, e)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              {t("deleteAccount")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
