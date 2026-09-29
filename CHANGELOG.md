@@ -2,6 +2,32 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.37.0] — 2026-09-29
+
+### Corrigido
+
+- **A IA não confunde mais um pedido antigo com um novo.** Achado a partir de
+  áudios reais da equipe da Concórdia: quando um cliente que já tinha pedido
+  antes (às vezes dias atrás, às vezes num atendimento feito por um humano)
+  mandava só "bom dia", a IA em alguns casos "puxava" os itens do último
+  pedido dele e já montava o carrinho de novo — sem o cliente ter pedido
+  nada daquela vez. Causa raiz: o histórico de mensagens que alimenta a IA
+  não carregava nenhuma informação de tempo — uma mensagem de 8 dias atrás
+  parecia tão "recente" quanto uma de 8 segundos atrás. Agora, quando há um
+  intervalo de 6h ou mais entre duas mensagens da mesma conversa, uma nota
+  é inserida no contexto avisando a IA que tudo antes daquele ponto é de um
+  atendimento já encerrado.
+- **A IA não cancela mais um pedido que já foi entregue.** Mesma raiz da
+  família de bugs do pedido duplicado do Rogério (31/08, nunca resolvido) e
+  de um caso novo, real, do dia 29/09: um pedido já entregue (confirmado 39
+  minutos antes) recebeu uma mensagem de acompanhamento pedindo pra receber
+  o troco em dinheiro via Pix — a IA leu isso como "cliente quer trocar a
+  forma de pagamento", cancelou o pedido já entregue e reimprimiu um
+  recibo de "PEDIDO CANCELADO — NÃO PREPARAR" na cozinha, que já tinha
+  preparado e entregue horas antes. Agora, um pedido com mais de 30 minutos
+  não pode mais ser cancelado automaticamente pela IA — ela avisa o
+  cliente que um humano vai ajudar, em vez de agir sozinha.
+
 ## [0.36.1] — 2026-09-22
 
 ### Corrigido

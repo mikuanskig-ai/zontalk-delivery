@@ -1583,7 +1583,7 @@ describe('cancelOrderTool', () => {
     const { db, getOrderInfo, deliveryOrderUpdates } = makeDb({
       orderInfo: { lastPlacedOrderId: 'order-1', lastPlacedOrderTotal: 95 },
       deliveryOrders: [
-        { id: 'order-1', account_id: 'acct-1', status: 'pending_confirmation', contact_id: 'contact-1', total: 95, currency: 'BRL' },
+        { id: 'order-1', account_id: 'acct-1', status: 'pending_confirmation', contact_id: 'contact-1', total: 95, currency: 'BRL', created_at: new Date().toISOString() },
       ],
     })
     const res = await cancelOrderTool.execute({}, ctxFor(db))
@@ -1625,12 +1625,53 @@ describe('cancelOrderTool', () => {
   it('refuses to auto-cancel an order that is already out for delivery or delivered', async () => {
     const { db, deliveryOrderUpdates } = makeDb({
       orderInfo: { lastPlacedOrderId: 'order-1' },
-      deliveryOrders: [{ id: 'order-1', account_id: 'acct-1', status: 'out_for_delivery', contact_id: 'c1', total: 10, currency: 'BRL' }],
+      deliveryOrders: [{ id: 'order-1', account_id: 'acct-1', status: 'out_for_delivery', contact_id: 'c1', total: 10, currency: 'BRL', created_at: new Date().toISOString() }],
     })
     const res = await cancelOrderTool.execute({}, ctxFor(db))
     expect(res.content).toMatch(/too late to cancel/i)
     expect(res.content).toMatch(/human/i)
     expect(deliveryOrderUpdates).toEqual([])
+  })
+
+  it("refuses to auto-cancel a 'confirmed' order old enough to plausibly already be delivered — regression, 2026-09-29 (Concórdia, order 97a5df4d: this account's staff never move an order past 'confirmed', so the status check alone never catches an already-delivered order; a customer's follow-up about receiving cash troco via Pix got misread as a payment-method correction, and the model cancelled + reprinted a 'NÃO PREPARAR' ticket for an order delivered 39 minutes earlier)", async () => {
+    const { db, deliveryOrderUpdates } = makeDb({
+      orderInfo: { lastPlacedOrderId: 'order-1' },
+      deliveryOrders: [
+        {
+          id: 'order-1',
+          account_id: 'acct-1',
+          status: 'confirmed',
+          contact_id: 'c1',
+          total: 28,
+          currency: 'BRL',
+          created_at: new Date(Date.now() - 39 * 60 * 1000).toISOString(),
+        },
+      ],
+    })
+    const res = await cancelOrderTool.execute({}, ctxFor(db))
+    expect(res.content).toMatch(/too late to cancel/i)
+    expect(res.content).toMatch(/human/i)
+    expect(deliveryOrderUpdates).toEqual([])
+  })
+
+  it('still allows cancelling a recently confirmed order — a genuine correction shortly after ordering', async () => {
+    const { db, deliveryOrderUpdates } = makeDb({
+      orderInfo: { lastPlacedOrderId: 'order-1' },
+      deliveryOrders: [
+        {
+          id: 'order-1',
+          account_id: 'acct-1',
+          status: 'confirmed',
+          contact_id: 'c1',
+          total: 28,
+          currency: 'BRL',
+          created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        },
+      ],
+    })
+    const res = await cancelOrderTool.execute({}, ctxFor(db))
+    expect(res.content).toContain('cancelled')
+    expect(deliveryOrderUpdates).toEqual([expect.objectContaining({ id: 'order-1', status: 'cancelled' })])
   })
 
   it('clears the stale pointer and reports gracefully when the referenced order row no longer exists', async () => {

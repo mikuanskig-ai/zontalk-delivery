@@ -26,17 +26,12 @@
   webhook do WuzAPI quando um cliente clica num anúncio de verdade e
   manda a primeira mensagem (extração especulativa, nunca confirmada
   — mesma cautela já documentada no zontalk-crm).
-- [ ] **Causa raiz de por que a IA recriou o pedido do Rogério (31/08)
-  não foi resolvida** — o pedido já tinha sido confirmado e "enviado
-  pra cozinha" quando o cliente mandou uma mensagem de acompanhamento
-  sem relação nenhuma ("Minha esposa tá fazendo o pix" / "E Silvana
-  Mendes" — só informando quem ia pagar) e a IA, mesmo assim, criou um
-  SEGUNDO pedido idêntico. Já existe instrução no prompt desde 14/08
-  pra sempre cancelar antes de recriar — não seguiu aqui. Corrigido só
-  a consequência (impressão dupla, ver Feitas 01/09) — a causa da
-  duplicação em si continua em aberto, sem padrão claro o suficiente
-  ainda pra uma trava de código específica (diferente dos outros casos
-  de duplicação já corrigidos, que tinham gatilho identificável).
+- [x] ~~Causa raiz de por que a IA recriou o pedido do Rogério (31/08)
+  não foi resolvida~~ — **causa raiz da família toda de bugs achada e
+  corrigida em 29/09**, ver Feitas: um pedido antigo (confirmado e às
+  vezes já entregue) sem NENHUM sinal de tempo no contexto da IA, então
+  uma mensagem de acompanhamento sem relação (troco, quem paga, etc.)
+  era lida como correção do pedido em andamento. Ver v0.37.0.
 - [ ] **Painel "Saúde da IA" — zero visibilidade de saúde da IA por
   conta** (achado avaliando o `/admin` pro lado comercial, 28/08).
   Conferi o `/api/admin/stats` que alimenta o dashboard — tem métricas
@@ -148,6 +143,42 @@
   não é sintoma de algo pior.
 
 ## Feitas
+
+### 2026-09-29 — IA não confunde mais pedido antigo com novo, nem cancela pedido já entregue (v0.37.0)
+
+Investigação disparada por 6 áudios de voz reais da Sil (atendente da
+Concórdia) mandados pro Éder, mais 2 imagens (print de um pedido
+cancelado + conversa do WhatsApp). Transcrevi os áudios localmente
+(`faster-whisper`, sem chave de API — instalado na hora) e cruzei com
+o banco de produção. Dois bugs distintos, mesma raiz estrutural:
+
+1. **IA "puxa" o carrinho do pedido anterior do cliente.** Cliente
+   mandou só "bom dia" — a IA já respondeu "Anotei 1 marmita M e 1
+   marmita P" antes de ele dizer qualquer coisa, e no resumo incluiu
+   uma Coca 2L que só existia num atendimento manual (humano) da MESMA
+   conversa, 8 dias antes. Causa raiz: `buildConversationContext`
+   (`src/lib/ai/context.ts`) nunca selecionava `created_at` — uma
+   mensagem de 8 dias atrás e uma de 8 segundos atrás chegavam
+   idênticas pro modelo. Corrigido com uma nota de sistema inserida no
+   histórico sempre que o intervalo entre duas mensagens é ≥6h (mesma
+   janela já usada pela varredura de carrinho abandonado), avisando
+   que tudo antes daquele ponto é de um atendimento já encerrado.
+
+2. **IA cancelou um pedido que já tinha sido entregue.** Pedido do
+   João (#97a5df4d, R$28) confirmado e entregue; 39 minutos depois ele
+   mandou uma mensagem pedindo pra receber o troco em dinheiro via
+   Pix — a IA leu como "mudança de forma de pagamento", chamou
+   `cancel_order` e reimprimiu um recibo "PEDIDO CANCELADO — NÃO
+   PREPARAR" pra uma cozinha que já tinha preparado e entregue (a
+   Ivonete, da cozinha, levou o recibo pra Sil confirmar, achando
+   estranho). É a mesma família do bug nunca resolvido do pedido do
+   Rogério (31/08, ver Pendentes). A trava por `status` (`out_for_
+   delivery`/`delivered`) já existia mas nunca dispara nesta conta —
+   confirmado: 183 pedidos `confirmed`, 0 em qualquer status depois
+   disso, em 30 dias (a equipe não usa esses status). Adicionei uma
+   trava por TEMPO em `cancelOrderTool` (`src/lib/ai/tools/delivery.ts`):
+   pedido com 30+ minutos não pode mais ser cancelado automaticamente
+   pela IA — ela avisa o cliente que um humano vai resolver.
 
 ### 2026-09-22 — Auto-exit vira idle timeout + storage 500 corrigido (v0.36.1)
 

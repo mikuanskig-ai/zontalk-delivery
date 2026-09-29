@@ -1095,11 +1095,20 @@ export const updateOrderInfoTool: ToolDefinition = {
   },
 }
 
+// Past this age, "the customer is correcting an order still being
+// prepared" stops being the plausible read — see the 2026-09-29
+// incident note on the age check below (that one was cancelled 39
+// minutes in, already delivered). 30 minutes comfortably covers a
+// local marmita delivery while still leaving room for a genuine,
+// prompt correction right after ordering.
+const ORDER_TOO_OLD_TO_AUTO_CANCEL_MS = 30 * 60 * 1000
+
 export const cancelOrderTool: ToolDefinition = {
   name: 'cancel_order',
   description:
     'Cancels the order placed earlier THIS conversation (see "An order was ALREADY PLACED" in the order-state summary — that is the one this cancels, you never need to pass an id). ' +
-    'Use this the moment the customer corrects or changes anything about an order you already placed — a different quantity, a different item, a different address — BEFORE building the corrected cart and calling place_order again. ' +
+    'Use this the moment the customer corrects or changes an ITEM, quantity or delivery address of an order you JUST placed — BEFORE building the corrected cart and calling place_order again. ' +
+    'Do NOT use this for a question about the cash troco/change on an already-placed order (e.g. asking to receive the change via Pix instead) — that is not a correction to the order itself, just tell the customer you noted it. ' +
     'Never place a second order without cancelling the first one first: that sends the kitchen two separate tickets for what the customer meant as one single corrected order, and can double-charge them.',
   parameters: {
     type: 'object',
@@ -1116,7 +1125,7 @@ export const cancelOrderTool: ToolDefinition = {
 
     const { data: order } = await ctx.db
       .from('delivery_orders')
-      .select('id, status, contact_id, total, currency')
+      .select('id, status, contact_id, total, currency, created_at')
       .eq('id', orderInfo.lastPlacedOrderId)
       .eq('account_id', ctx.accountId)
       .maybeSingle()
@@ -1136,9 +1145,24 @@ export const cancelOrderTool: ToolDefinition = {
     // a human would draw. Tell the model to hand this one to staff
     // instead of silently flipping a status a delivery is already
     // committed to.
-    if (order.status === 'out_for_delivery' || order.status === 'delivered') {
+    //
+    // The status check alone isn't enough: confirmed 2026-09-29
+    // (Concórdia, order 97a5df4d) — this account's staff never
+    // actually move an order past 'confirmed' (no out_for_delivery/
+    // delivered in 30 days of orders), so that branch is structurally
+    // dead for them. What happened instead: the order was placed AND
+    // ALREADY DELIVERED, then ~39 minutes later the customer sent a
+    // follow-up about getting their cash troco via Pix instead — the
+    // model misread that as "customer wants to change the payment
+    // method", cancelled the delivered order, and fired a "PEDIDO
+    // CANCELADO — NÃO PREPARAR" ticket to a kitchen that had already
+    // made and sent it. A time backstop catches this even when the
+    // model's own reasoning doesn't: past this age, correcting a
+    // "still being prepared" order is no longer the plausible read.
+    const ageMs = Date.now() - new Date(order.created_at).getTime()
+    if (order.status === 'out_for_delivery' || order.status === 'delivered' || ageMs >= ORDER_TOO_OLD_TO_AUTO_CANCEL_MS) {
       return {
-        content: `Order ${order.id} is already ${order.status} — too late to cancel automatically. Tell the customer a human needs to help with this correction.`,
+        content: `Order ${order.id} was placed ${Math.round(ageMs / 60000)} minutes ago and is likely already out for delivery or delivered — too late to cancel automatically. Do not cancel or re-place it. Tell the customer a human needs to help with this.`,
       }
     }
 
