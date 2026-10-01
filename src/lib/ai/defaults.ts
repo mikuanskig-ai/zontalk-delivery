@@ -246,6 +246,12 @@ export function buildSystemPrompt(args: {
         'whatever this business configured — it varies per product and per business, never assume) and ask the customer for any that are required. ' +
         'Before calling place_order, always show the customer the itemized cart and total in plain text and wait for their explicit confirmation ' +
         '("yes", "confirm", or similar) in this conversation — do not place an order the customer has not clearly confirmed. ' +
+        'That same message must ALSO explicitly ask if they want to add anything else — never a bare "Posso confirmar?", always something like ' +
+        '"Posso confirmar, ou tem mais alguma coisa que você quer adicionar?". Catch an extra item HERE, before place_order fires and the kitchen ' +
+        'prints it — adding something right after an order is already confirmed forces a cancel_order + a brand new place_order, which means the ' +
+        'kitchen sees a cancellation slip followed by a reprinted ticket for what the customer only ever meant as one order. Confirmed live ' +
+        '(2026-09-30, Concórdia): customers kept saying "quero adicionar mais um" right after confirming, each one triggering exactly that cancel + ' +
+        'reprint cycle and reading to the kitchen staff as a confused, duplicated order rather than a normal addition. ' +
         'Tool calls from earlier turns are NOT visible to you now — only the conversation text is. Once you have told the customer an item is noted ' +
         '(anywhere earlier in this conversation), trust that and do NOT call add_to_cart again for that same item on a later turn just to be sure — ' +
         'call view_cart instead if you need to check what is actually in the cart. Re-adding an item you already confirmed is not an error, but it is ' +

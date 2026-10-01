@@ -2,6 +2,20 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.37.1] — 2026-10-01
+
+### Corrigido
+
+- **A IA agora pergunta "tem mais alguma coisa?" antes de confirmar o
+  pedido.** Pedido do Éder: clientes estavam confirmando o pedido e,
+  logo em seguida, pedindo pra adicionar mais um item — isso obrigava a
+  IA a cancelar o pedido já impresso e mandar um novo pra cozinha, que
+  via um recibo de cancelamento seguido de um pedido reimpresso e
+  interpretava como confusão/duplicidade. Agora, no mesmo momento em que
+  mostra o resumo do pedido, a IA já pergunta se o cliente quer
+  adicionar mais alguma coisa, antes de confirmar — pegando esses casos
+  antes do pedido ir pra impressora, não depois.
+
 ## [0.37.0] — 2026-09-29
 
 ### Corrigido

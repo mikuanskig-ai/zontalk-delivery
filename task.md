@@ -144,6 +144,19 @@
 
 ## Feitas
 
+### 2026-10-01 — IA pergunta "mais alguma coisa?" antes de confirmar (v0.37.1)
+
+Pedido direto do Éder (áudio): clientes confirmavam o pedido e, logo
+depois, pediam pra adicionar mais um item — isso força um cancel_order
++ place_order novo, e a cozinha via um recibo de cancelamento seguido
+de um pedido reimpresso, lendo como confusão/duplicidade (mesma classe
+de sintoma do v0.37.0, mas a causa aqui é só a falta de uma pergunta no
+momento certo, não um bug de estado). Ajuste só no prompt
+(`src/lib/ai/defaults.ts`): a mensagem de confirmação do pedido agora
+sempre pergunta explicitamente se o cliente quer adicionar mais alguma
+coisa, antes de chamar place_order — nunca mais um "Posso confirmar?"
+seco. Pega a adição ANTES do pedido ir pra impressora.
+
 ### 2026-09-29 — IA não confunde mais pedido antigo com novo, nem cancela pedido já entregue (v0.37.0)
 
 Investigação disparada por 6 áudios de voz reais da Sil (atendente da

@@ -93,3 +93,23 @@ describe('buildSystemPrompt — stale price warning (toolsActive)', () => {
     expect(prompt).not.toMatch(/never reuse an old price/i)
   })
 })
+
+describe('buildSystemPrompt — "anything else?" before confirming (toolsActive)', () => {
+  // Confirmed live (2026-09-30, Concórdia): customers kept saying "quero
+  // adicionar mais um" right after confirming an order — each one forced
+  // a cancel_order + a brand new place_order, so the kitchen saw a
+  // cancellation slip followed by a reprinted ticket for what the
+  // customer only ever meant as one order. Asking for anything-else
+  // RIGHT when the summary is shown, before place_order fires, catches
+  // the addition before the kitchen ever sees the first ticket.
+  it('requires the confirmation message to also ask if the customer wants to add anything else', () => {
+    const prompt = buildSystemPrompt({ userPrompt: null, mode: 'draft', toolsActive: true })
+    expect(prompt).toMatch(/mais alguma coisa/i)
+    expect(prompt).toMatch(/never a bare "posso confirmar\?"/i)
+  })
+
+  it('omits the instruction when tools are not active — no place_order to guard', () => {
+    const prompt = buildSystemPrompt({ userPrompt: null, mode: 'draft', toolsActive: false })
+    expect(prompt).not.toMatch(/mais alguma coisa/i)
+  })
+})
