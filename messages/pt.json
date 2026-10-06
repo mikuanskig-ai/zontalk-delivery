@@ -2801,7 +2801,31 @@
       "loadFailed": "Falha ao carregar.",
       "moduleOff": "O follow-up funciona com pedidos de delivery e só aparece para contas com o módulo Delivery ativado (Configurações → Módulos)."
     },
-    "metaCapi": {
+    "aiFollowupEvents": {
+      "title": "Histórico do follow-up",
+      "description": "O que a IA enviou (ou tentou enviar) para cada contato, e se o cliente respondeu depois. O WhatsApp confirma o envio, não a leitura.",
+      "statSent": "Enviados",
+      "statFailed": "Falharam",
+      "statReplied": "Responderam",
+      "statClosed": "Fechados sem resposta",
+      "filterAll": "Todos",
+      "filterSent": "Enviados",
+      "filterFailed": "Falharam",
+      "filterReplied": "Responderam",
+      "filterSilent": "Sem resposta",
+      "loadFailed": "Não foi possível carregar o histórico.",
+      "loading": "Carregando...",
+      "empty": "Nenhum follow-up enviado ainda.",
+      "unknownContact": "Contato sem nome",
+      "kindClosed": "Fechado sem resposta",
+      "kindNudge": "Lembrete {step}",
+      "statusFailed": "Falhou",
+      "statusSent": "Enviado",
+      "replied": "Cliente respondeu",
+      "noReply": "Sem resposta",
+      "errorPrefix": "Erro:"
+  },
+  "metaCapi": {
       "title": "Meta Ads (Clique para WhatsApp)",
       "description": "Avisa a Meta quando um pedido feito pelo WhatsApp veio de um clique em anúncio — fecha o funil e ajuda a Meta a otimizar quem recebe o anúncio.",
       "platformNotReady": "Esse recurso ainda não foi habilitado nesta plataforma pelo suporte do Zontalk.",

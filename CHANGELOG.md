@@ -2,6 +2,18 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.38.0] — 2026-10-06
+
+### Adicionado
+
+- **Histórico do follow-up na aba Agentes de IA → Follow-up.** Agora dá pra
+  ver, por contato, o que o follow-up fez: cada lembrete enviado (com o texto
+  e o número do lembrete), cada envio que falhou (com o motivo), cada conversa
+  fechada por falta de resposta, e se o cliente respondeu depois. Filtros
+  rápidos por enviados, falhas, respondidos e sem resposta. Só admins veem.
+  O WhatsApp confirma o envio, não a leitura — por isso a tela mostra
+  "enviado" e "cliente respondeu", e não "entregue".
+
 ## [0.37.1] — 2026-10-01
 
 ### Corrigido

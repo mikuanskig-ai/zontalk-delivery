@@ -144,6 +144,19 @@
 
 ## Feitas
 
+### 2026-10-06 — Histórico do follow-up na aba Follow-up (v0.38.0)
+
+Pedido do Eder após a auditoria: precisava ver o que o follow-up fez, por
+contato. Nova tabela `ai_followup_events` (migration 087, RLS admin+) é
+gravada pelo sweep: cada lembrete enviado ou que falhou (com erro), e cada
+fechamento por falta de resposta. A rota `GET /api/ai/followup/events`
+(admin+) devolve os últimos 100 eventos com nome do contato, status atual da
+conversa e se o cliente respondeu depois do evento. A aba Follow-up ganhou o
+card "Histórico do follow-up" com contadores e filtros. Limite honesto: o
+WhatsApp só confirma o envio, não a leitura, então a tela diz "enviado" e
+"cliente respondeu", nunca "entregue". Pendente: o bug da auditoria (follow-up
+cobrar cliente já atendido por humano) ainda não foi corrigido.
+
 ### 2026-10-01 — IA pergunta "mais alguma coisa?" antes de confirmar (v0.37.1)
 
 Pedido direto do Éder (áudio): clientes confirmavam o pedido e, logo

@@ -8,6 +8,7 @@ import { AiPlayground } from '@/components/agents/ai-playground';
 import { AiUsageCard } from '@/components/agents/ai-usage';
 import { AiConfig } from '@/components/settings/ai-config';
 import { AiFollowupConfig } from '@/components/settings/ai-followup-config';
+import { AiFollowupEvents } from '@/components/settings/ai-followup-events';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
 
@@ -83,7 +84,10 @@ export default function AgentsPage() {
           </TabsContent>
 
           <TabsContent value="followup" className="mt-4">
-            <AiFollowupConfig />
+            <div className="space-y-6">
+              <AiFollowupConfig />
+              <AiFollowupEvents />
+            </div>
           </TabsContent>
 
           {canViewUsage && (

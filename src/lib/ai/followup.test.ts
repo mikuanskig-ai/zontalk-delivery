@@ -35,6 +35,7 @@ function fakeDb(data: {
   claimFails?: boolean
 }) {
   const calls: Call[] = []
+  const inserts: Record<string, unknown>[] = []
   const db = {
     from: (table: string) => {
       const call: Call = { table, op: 'select', filters: [] }
@@ -53,6 +54,10 @@ function fakeDb(data: {
       const chain: Record<string, unknown> = {
         select: () => chain,
         update: (p: Record<string, unknown>) => ((call.op = 'update'), (call.payload = p), chain),
+        insert: (p: Record<string, unknown>) => {
+          if (table === 'ai_followup_events') inserts.push(p)
+          return Promise.resolve({ error: null })
+        },
         eq: (c: string, v: unknown) => (call.filters.push([c, v]), chain),
         not: (c: string) => (call.filters.push([c, 'not-null']), chain),
         lte: () => chain,
@@ -67,7 +72,7 @@ function fakeDb(data: {
       return chain
     },
   }
-  return { db: db as unknown as SupabaseClient, calls }
+  return { db: db as unknown as SupabaseClient, calls, inserts }
 }
 
 const cfg = (over: Record<string, unknown> = {}) => ({
@@ -114,6 +119,32 @@ describe('runFollowupSweep — nudges', () => {
     expect(claim.filters).toContainEqual(['ai_followup_count', 0]) // optimistic claim
   })
 
+  it('records every successful nudge in the follow-up history (step, text, sent)', async () => {
+    const { db, inserts } = fakeDb({ ai_configs: [cfg()], convs: [conv()] })
+    await runFollowupSweep(db, NOW)
+    expect(inserts).toHaveLength(1)
+    expect(inserts[0]).toMatchObject({
+      account_id: 'acc-1',
+      conversation_id: 'conv-1',
+      contact_id: 'contact-1',
+      kind: 'nudge',
+      step: 1,
+      status: 'sent',
+    })
+    expect(String(inserts[0]!.message_text)).toContain('2x Marmita M')
+  })
+
+  it('records a failed nudge with the error, so the operator can see what did not reach the customer', async () => {
+    h.engineSendText.mockRejectedValue(new Error('whatsapp down'))
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { db, inserts } = fakeDb({ ai_configs: [cfg()], convs: [conv()] })
+    await runFollowupSweep(db, NOW)
+    expect(inserts).toEqual([
+      expect.objectContaining({ kind: 'nudge', status: 'failed', error: 'whatsapp down', step: 1 }),
+    ])
+    spy.mockRestore()
+  })
+
   it('does not send when another sweep already claimed this nudge', async () => {
     const { db } = fakeDb({ ai_configs: [cfg()], convs: [conv()], claimFails: true })
     const r = await runFollowupSweep(db, NOW)
@@ -153,13 +184,14 @@ describe('runFollowupSweep — nudges', () => {
 
 describe('runFollowupSweep — closing', () => {
   it('closes a ticket whose nudges all went unanswered past the close window', async () => {
-    const { db, calls } = fakeDb({
+    const { db, calls, inserts } = fakeDb({
       ai_configs: [cfg()],
       convs: [conv({ ai_followup_count: 1, last_message_at: iso(130) })],
     })
     const r = await runFollowupSweep(db, NOW)
     expect(r.closedNoReply).toBe(1)
     expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(inserts).toEqual([expect.objectContaining({ kind: 'close_no_reply', status: 'sent', conversation_id: 'conv-1' })])
     const close = calls.find((c) => c.op === 'update')!
     expect(close.payload).toMatchObject({ status: 'closed', close_reason: 'followup_no_reply', ai_cart: [] })
   })

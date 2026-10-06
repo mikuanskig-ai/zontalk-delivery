@@ -4,6 +4,7 @@ import { getAiBusinessHours, isWithinBusinessHours } from '@/lib/delivery/busine
 import {
   FOLLOWUP_COLUMNS,
   closeConversationByAi,
+  logFollowupEvent,
   decideFollowup,
   parseFollowupSettings,
   renderFollowupText,
@@ -115,6 +116,7 @@ export async function runFollowupSweep(db: SupabaseClient, nowMs: number = Date.
         if (decision.action === 'close') {
           if (await closeConversationByAi(db, { accountId, conversationId: c.id, contactId: c.contact_id, reason: 'followup_no_reply' })) {
             result.closedNoReply++
+            await logFollowupEvent(db, { accountId, conversationId: c.id, contactId: c.contact_id, kind: 'close_no_reply', status: 'sent' })
           }
         } else if (decision.action === 'send') {
           // Claim the slot first (conditional on the count we read) so two
@@ -143,8 +145,11 @@ export async function runFollowupSweep(db: SupabaseClient, nowMs: number = Date.
               aiGenerated: true,
             })
             result.sent++
+            await logFollowupEvent(db, { accountId, conversationId: c.id, contactId: c.contact_id, kind: 'nudge', step: decision.index + 1, status: 'sent', messageText: text })
           } catch (err) {
-            console.error(`[followup-sweep] send failed for conversation ${c.id}:`, err instanceof Error ? err.message : err)
+            const message = err instanceof Error ? err.message : String(err)
+            console.error(`[followup-sweep] send failed for conversation ${c.id}:`, message)
+            await logFollowupEvent(db, { accountId, conversationId: c.id, contactId: c.contact_id, kind: 'nudge', step: decision.index + 1, status: 'failed', error: message, messageText: text })
           }
         }
       }

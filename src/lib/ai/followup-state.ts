@@ -203,3 +203,33 @@ export async function resetFollowupOnInbound(
   }
 }
 
+
+export interface FollowupEventInput {
+  accountId: string
+  conversationId: string
+  contactId: string | null
+  kind: 'nudge' | 'close_no_reply'
+  step?: number
+  status: 'sent' | 'failed'
+  error?: string
+  messageText?: string
+}
+
+/** Best-effort audit row for the Follow-up tab. Never throws — a logging hiccup must not stop a nudge or a close. */
+export async function logFollowupEvent(db: SupabaseClient, ev: FollowupEventInput): Promise<void> {
+  try {
+    const { error } = await db.from('ai_followup_events').insert({
+      account_id: ev.accountId,
+      conversation_id: ev.conversationId,
+      contact_id: ev.contactId,
+      kind: ev.kind,
+      step: ev.step ?? null,
+      status: ev.status,
+      error: ev.error ?? null,
+      message_text: ev.messageText ?? null,
+    })
+    if (error) console.error('[followup] event log insert failed:', error.message)
+  } catch (err) {
+    console.error('[followup] event log threw:', err instanceof Error ? err.message : err)
+  }
+}
