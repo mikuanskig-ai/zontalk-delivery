@@ -6,6 +6,19 @@
 
 ## Pendentes
 
+- [ ] **Deploy por `git pull` quebrado na VPS nova (zontalk-core-vps)** — o
+  remoto `origin` de `/opt/wacrm` usa o alias `github-wacrm-deploy` e a chave
+  de deploy que só existiam na VPS antiga (nada de `~/.ssh/config` nem chave
+  lá). Hoje o deploy é por `git bundle` + `git merge --ff-only` (ver memória do
+  projeto). Correção de verdade: gerar uma chave nova na VPS e o Éder
+  cadastrá-la como Deploy Key no repositório `mikuanskig-ai/wacrm`.
+- [ ] **Build na VPS nova pode derrubá-la (23/10)** — 3,8 GB de RAM, sem swap,
+  compartilhada com outros serviços. O `npm run build` foi morto por OOM e a
+  máquina travou ~10 min (site e SSH fora, carga 116). Mitigação atual: swap
+  temporário de 3 GB (`/swapfile-build`, fora do fstab, some no reboot) e
+  build em segundo plano com `nice` e limite de memória. Decidir: tornar o
+  swap permanente, aumentar a RAM, ou buildar fora da VPS.
+
 - [ ] **Meta Ads (CTWA) — plataforma pronta, falta exercitar o fluxo
   real com uma conta de cliente.** Resolvido nesta sessão: token de
   Usuário de Sistema gerado com o escopo certo
