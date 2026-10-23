@@ -2,6 +2,26 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.40.1] — 2026-10-23
+
+### Corrigido
+
+- **A tela inicial "Pedidos de hoje" (0.40.0) quebrava ao abrir** com "Algo deu
+  errado". O contador de conversas não lidas usa um canal em tempo real com
+  nome fixo, e o menu lateral já usava o mesmo; quando a tela nova chamou o
+  contador pela segunda vez, o Supabase devolveu o canal já ativo e recusou
+  adicionar o listener, derrubando a página inteira. Agora cada uso do
+  contador tem o seu canal. A 0.40.0 ficou no ar por cerca de 10 minutos; a
+  tela foi revertida para a 0.39.0 assim que o erro foi visto.
+
+### Interno
+
+- Novos testes que montam a tela inicial inteira (e o contador de não lidas
+  junto com o menu lateral) com um Supabase de mentira que imita essa regra
+  de canais — o erro escapou porque a pré-visualização só renderizava a parte
+  visual, nunca o componente que carrega os dados. Adicionado `jsdom` como
+  dependência de desenvolvimento para permitir testes de componentes.
+
 ## [0.40.0] — 2026-10-23
 
 ### Adicionado

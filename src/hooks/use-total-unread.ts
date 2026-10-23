@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Conversation } from "@/types";
 
@@ -10,10 +10,16 @@ import type { Conversation } from "@/types";
  * Inbox nav entry when the user is elsewhere in the app.
  *
  * Lives on its own realtime channel (distinct from the inbox page's
- * "inbox-realtime") so both can coexist without sharing state.
+ * "inbox-realtime") so both can coexist without sharing state. Every
+ * USE of the hook gets a channel of its own too: supabase-js hands back
+ * the already-subscribed channel for a repeated name, and adding a
+ * listener to it throws — which crashed the whole dashboard route
+ * (2026-10-23) the moment a second component on the same screen, next
+ * to the sidebar, called this hook.
  */
 export function useTotalUnread(): number {
   const [total, setTotal] = useState(0);
+  const instanceId = useId().replace(/:/g, "");
 
   // Keep a live local mirror of {id: unread_count} so INSERT/UPDATE/DELETE
   // events can adjust the total in O(1) without refetching.
@@ -43,7 +49,7 @@ export function useTotalUnread(): number {
     })();
 
     const channel = supabase
-      .channel("total-unread-realtime")
+      .channel(`total-unread-realtime-${instanceId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "conversations" },
@@ -68,7 +74,7 @@ export function useTotalUnread(): number {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [instanceId]);
 
   return total;
 }

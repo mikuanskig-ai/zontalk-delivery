@@ -157,6 +157,26 @@
 
 ## Feitas
 
+### 2026-10-23 — Incidente: home nova quebrou o dashboard (v0.40.1)
+
+A 0.40.0 (tela "Pedidos de hoje") foi ao ar e o Éder, já logado como
+Concórdia, viu "Algo deu errado" em `/dashboard` — a tela que toda a equipe
+abre ao logar — com `cannot add postgres_changes callbacks for
+realtime:total-unread-realtime after subscribe()`. Causa: `useTotalUnread`
+criava o canal com nome fixo; o menu lateral já o usava e a tela nova o chamou
+de novo, o supabase-js devolveu o canal ASSINADO e recusou o `.on()`. Foi ao ar
+~10 min (16:36–16:46); mitigação imediata: troquei `.next` pelo build anterior
+guardado (`/opt/wacrm-next-prev`, v0.39.0) em ~10 s. Correção: canal por
+instância (`useId`). Por que escapou: minha "verificação visual" renderizou só
+o `HomeBoardView` com número fixo; o componente que chama os hooks e carrega os
+dados nunca rodou antes do deploy, e eu só tinha ressalvado "não testei com
+login", não o fato de o container nunca ter sido montado. Corrigido o método:
+testes que MONTAM o container real (jsdom, devDependency nova) com um
+Supabase falso que replica a regra de canais — confirmado que sem o fix eles
+falham com o erro idêntico ao de produção. Regra daqui pra frente: toda tela
+nova precisa ter o componente de topo (o que chama hooks) montado em teste
+antes de ir pro ar, não só a parte visual.
+
 ### 2026-10-23 — Tela inicial "Pedidos de hoje" para restaurantes (v0.40.0)
 
 Segunda etapa do pedido do Éder ("mais parecido com o iFood"), depois do menu
