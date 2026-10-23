@@ -23,6 +23,7 @@
   "Sidebar": {
     "title": "ZonTalk",
     "dashboard": "Dashboard",
+    "home": "Home",
     "inbox": "Inbox",
     "contacts": "Contacts",
     "pipelines": "Pipelines",
@@ -1199,6 +1200,41 @@
         "cancel": "Cancel",
         "apply": "Apply"
       }
+    },
+    "todayHome": {
+      "title": "Today's orders",
+      "tabToday": "Today's orders",
+      "tabResults": "Results",
+      "statOrders": "Orders today",
+      "statRevenue": "Revenue",
+      "statTicket": "Average ticket",
+      "statUnread": "Unread chats",
+      "stage": {
+        "new": "New",
+        "preparing": "Preparing",
+        "delivering": "Out for delivery",
+        "done": "Done"
+      },
+      "emptyColumn": "Nothing here",
+      "emptyTitle": "No orders yet today",
+      "emptyHint": "When a customer places an order, it shows up here right away.",
+      "loadFailed": "Could not load the orders.",
+      "retry": "Try again",
+      "toastFailedUpdate": "Failed to update the order",
+      "unknownCustomer": "Customer",
+      "delivery": "Delivery",
+      "pickup": "Pickup",
+      "action": {
+        "pending_confirmation": "Confirm order",
+        "confirmed": "Start preparing",
+        "in_production": "Mark ready",
+        "ready": "Out for delivery",
+        "out_for_delivery": "Mark delivered",
+        "ready_pickup": "Mark picked up"
+      },
+      "finish": "Complete",
+      "print": "Print",
+      "details": "Details"
     },
     "operationsBoard": {
       "title": "Operations",

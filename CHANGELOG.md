@@ -2,6 +2,37 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.40.0] — 2026-10-23
+
+### Adicionado
+
+- **Nova tela inicial para restaurantes: "Pedidos de hoje".** Continuação do
+  pedido do Éder de deixar o app mais parecido com o iFood. Em contas com o
+  módulo Delivery, a tela inicial agora abre direto nos pedidos do dia, em
+  quatro colunas — **Novos, Em preparo, Saiu para entrega e Concluídos** — e
+  atualiza sozinha quando chega pedido novo. No topo, os números do dia
+  (pedidos, faturamento, ticket médio e conversas não lidas, com atalho para a
+  Caixa de entrada). Cada pedido mostra, sem precisar abrir nada, o que a
+  cozinha e o motoboy precisam: itens (com opcionais e observações), endereço
+  ou "Retirada", forma de pagamento, aviso de troco, total, e há quanto
+  tempo o pedido está esperando (amarelo a partir de 15 min, vermelho a partir
+  de 30). O botão grande leva o pedido para a próxima etapa ("Iniciar
+  preparo", "Marcar pronto", "Saiu para entrega", "Marcar entregue"), e
+  "Concluir" encerra de uma vez para quem não acompanha todas as etapas.
+  Pedido de **retirada** nunca passa por "saiu para entrega": pronto, o botão
+  vira "Marcar retirado".
+- O painel de antes (funil de clientes, gráficos, 90 dias) continua inteiro,
+  na aba **"Resultados"** da mesma tela. Contas sem Delivery ficam como estavam.
+- No menu lateral de restaurantes, o primeiro item agora é **Início**
+  (essa tela), seguido de Pedidos (histórico), Caixa de entrada e Cardápio.
+
+### Corrigido
+
+- **Cores ilegíveis no tema claro** nos selos de tempo do pedido
+  (amarelo/vermelho) e de pagamento ("Pago", "Pendente"...): estavam pensadas só
+  para fundo escuro. Vale também para o quadro de Operação, que usa os mesmos
+  selos.
+
 ## [0.39.0] — 2026-10-23
 
 ### Alterado

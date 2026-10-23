@@ -31,6 +31,9 @@ export interface NavGroup {
 }
 
 const DASHBOARD: NavItem = { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard };
+// Same route as DASHBOARD, but for a restaurant "/dashboard" opens on
+// today's orders — it is the app's home, so it reads "Início".
+const HOME: NavItem = { href: "/dashboard", labelKey: "home", icon: LayoutDashboard };
 const INBOX: NavItem = { href: "/inbox", labelKey: "inbox", icon: MessageSquare };
 const CONTACTS: NavItem = { href: "/contacts", labelKey: "contacts", icon: Users };
 const PIPELINES: NavItem = { href: "/pipelines", labelKey: "pipelines", icon: GitBranch };
@@ -57,8 +60,8 @@ const BASE_NAV_GROUPS: NavGroup[] = [
  * Sidebar layout for the account's enabled modules.
  *
  * A restaurant using Delivery gets an iFood-partner-style menu: what it
- * touches every day (orders, WhatsApp inbox, menu, results) always in
- * view, and the CRM tooling collapsed under "Mais ferramentas" — the
+ * touches every day (home with today's orders, order history, WhatsApp
+ * inbox, menu) always in view, and the CRM tooling collapsed under "Mais ferramentas" — the
  * team kept getting lost between Funis/Transmissões/Fluxos while just
  * trying to take an order (Eder, 2026-10-23). Nothing is removed; every
  * route stays one click away. Accounts without Delivery keep the
@@ -67,7 +70,7 @@ const BASE_NAV_GROUPS: NavGroup[] = [
 export function buildNavGroups(hasDelivery: boolean): NavGroup[] {
   if (!hasDelivery) return BASE_NAV_GROUPS;
   return [
-    { labelKey: null, items: [ORDERS, INBOX, CARDAPIO, DASHBOARD] },
+    { labelKey: null, items: [HOME, ORDERS, INBOX, CARDAPIO] },
     {
       labelKey: "moreTools",
       collapsible: true,

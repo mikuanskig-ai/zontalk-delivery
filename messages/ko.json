@@ -23,6 +23,7 @@
   "Sidebar": {
     "title": "ZonTalk",
     "dashboard": "대시보드",
+    "home": "홈",
     "inbox": "인박스",
     "contacts": "연락처",
     "pipelines": "파이프라인",
@@ -1198,6 +1199,41 @@
         "cancel": "취소",
         "apply": "적용"
       }
+    },
+    "todayHome": {
+      "title": "오늘의 주문",
+      "tabToday": "오늘의 주문",
+      "tabResults": "실적",
+      "statOrders": "오늘 주문",
+      "statRevenue": "매출",
+      "statTicket": "평균 주문액",
+      "statUnread": "읽지 않은 대화",
+      "stage": {
+        "new": "신규",
+        "preparing": "준비 중",
+        "delivering": "배달 중",
+        "done": "완료"
+      },
+      "emptyColumn": "주문 없음",
+      "emptyTitle": "오늘은 아직 주문이 없습니다",
+      "emptyHint": "고객이 주문하면 바로 여기에 표시됩니다.",
+      "loadFailed": "주문을 불러올 수 없습니다.",
+      "retry": "다시 시도",
+      "toastFailedUpdate": "주문 업데이트에 실패했습니다",
+      "unknownCustomer": "고객",
+      "delivery": "배달",
+      "pickup": "픽업",
+      "action": {
+        "pending_confirmation": "주문 확인",
+        "confirmed": "준비 시작",
+        "in_production": "준비 완료",
+        "ready": "배달 출발",
+        "out_for_delivery": "배달 완료",
+        "ready_pickup": "픽업 완료"
+      },
+      "finish": "완료 처리",
+      "print": "인쇄",
+      "details": "상세"
     },
     "operationsBoard": {
       "title": "운영",

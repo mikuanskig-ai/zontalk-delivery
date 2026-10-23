@@ -23,7 +23,7 @@ function elapsedMinutes(since: string): number {
 // this component instead of needing a synchronous setState-in-effect
 // resync — the lazy useState initializer then just picks up the fresh
 // value, and the interval only has to handle the passage of time.
-function ElapsedBadge({ since }: { since: string }) {
+export function ElapsedBadge({ since }: { since: string }) {
   const [minutes, setMinutes] = useState(() => elapsedMinutes(since));
 
   useEffect(() => {
@@ -33,9 +33,9 @@ function ElapsedBadge({ since }: { since: string }) {
 
   const tone =
     minutes >= ALERT_AFTER_MINUTES
-      ? "border-red-500/40 bg-red-500/10 text-red-300"
+      ? "border-red-500/40 bg-red-500/10 text-red-300 [html[data-mode=light]_&]:text-red-700"
       : minutes >= WARN_AFTER_MINUTES
-        ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+        ? "border-amber-500/40 bg-amber-500/10 text-amber-300 [html[data-mode=light]_&]:text-amber-700"
         : "border-border bg-muted text-muted-foreground";
 
   return (

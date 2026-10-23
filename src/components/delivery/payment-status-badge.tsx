@@ -5,10 +5,10 @@ import { useTranslations } from "next-intl";
 // visual cue, no business logic. Green for money in, red/amber for the
 // two outcomes that mean "didn't get paid".
 const PAYMENT_STATUS_STYLE: Record<DeliveryPaymentStatus, string> = {
-  pending_payment: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-  approved: "border-green-500/40 bg-green-500/10 text-green-300",
-  rejected: "border-red-500/40 bg-red-500/10 text-red-300",
-  refunded: "border-orange-500/40 bg-orange-500/10 text-orange-300",
+  pending_payment: "border-amber-500/40 bg-amber-500/10 text-amber-300 [html[data-mode=light]_&]:text-amber-700",
+  approved: "border-green-500/40 bg-green-500/10 text-green-300 [html[data-mode=light]_&]:text-green-700",
+  rejected: "border-red-500/40 bg-red-500/10 text-red-300 [html[data-mode=light]_&]:text-red-700",
+  refunded: "border-orange-500/40 bg-orange-500/10 text-orange-300 [html[data-mode=light]_&]:text-orange-700",
   cancelled: "border-border bg-muted text-muted-foreground",
 };
 

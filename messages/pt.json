@@ -23,6 +23,7 @@
   "Sidebar": {
     "title": "ZonTalk",
     "dashboard": "Painel",
+    "home": "Início",
     "inbox": "Caixa de entrada",
     "contacts": "Contatos",
     "pipelines": "Funis",
@@ -1199,6 +1200,41 @@
         "cancel": "Cancelar",
         "apply": "Atualizar"
       }
+    },
+    "todayHome": {
+      "title": "Pedidos de hoje",
+      "tabToday": "Pedidos de hoje",
+      "tabResults": "Resultados",
+      "statOrders": "Pedidos hoje",
+      "statRevenue": "Faturamento",
+      "statTicket": "Ticket médio",
+      "statUnread": "Conversas não lidas",
+      "stage": {
+        "new": "Novos",
+        "preparing": "Em preparo",
+        "delivering": "Saiu para entrega",
+        "done": "Concluídos"
+      },
+      "emptyColumn": "Nada por aqui",
+      "emptyTitle": "Nenhum pedido ainda hoje",
+      "emptyHint": "Quando um cliente fizer um pedido, ele aparece aqui na hora.",
+      "loadFailed": "Não foi possível carregar os pedidos.",
+      "retry": "Tentar de novo",
+      "toastFailedUpdate": "Falha ao atualizar o pedido",
+      "unknownCustomer": "Cliente",
+      "delivery": "Entrega",
+      "pickup": "Retirada",
+      "action": {
+        "pending_confirmation": "Confirmar pedido",
+        "confirmed": "Iniciar preparo",
+        "in_production": "Marcar pronto",
+        "ready": "Saiu para entrega",
+        "out_for_delivery": "Marcar entregue",
+        "ready_pickup": "Marcar retirado"
+      },
+      "finish": "Concluir",
+      "print": "Imprimir",
+      "details": "Detalhes"
     },
     "operationsBoard": {
       "title": "Operação",

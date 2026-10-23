@@ -43,10 +43,42 @@ import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
 import { ActivityFeed } from '@/components/dashboard/activity-feed'
 
 import { useTranslations } from 'next-intl'
+import { hasModule } from '@/lib/accounts/modules'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { TodayOrdersHome } from '@/components/delivery/today-orders-home'
 
 type RangeDays = 7 | 30 | 90
 
+/**
+ * Accounts running Delivery land on today's orders — what a restaurant
+ * looks at all day — with the CRM numbers one tab over. Everyone else
+ * keeps the original dashboard exactly as it was. Waits for the profile
+ * so a restaurant never sees the CRM dashboard flash before the switch.
+ */
 export default function DashboardPage() {
+  const { account, profileLoading } = useAuth()
+  const tHome = useTranslations('Delivery.todayHome')
+
+  if (profileLoading) return <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+  if (!hasModule(account, 'delivery')) return <ResultsDashboard />
+
+  return (
+    <Tabs defaultValue="today">
+      <TabsList>
+        <TabsTrigger value="today">{tHome('tabToday')}</TabsTrigger>
+        <TabsTrigger value="results">{tHome('tabResults')}</TabsTrigger>
+      </TabsList>
+      <TabsContent value="today" className="mt-4">
+        <TodayOrdersHome />
+      </TabsContent>
+      <TabsContent value="results" className="mt-4">
+        <ResultsDashboard />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+function ResultsDashboard() {
   const t = useTranslations('Dashboard.page')
   const tLoadError = useTranslations('Dashboard.loadError')
   const { defaultCurrency } = useAuth()

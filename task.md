@@ -157,6 +157,36 @@
 
 ## Feitas
 
+### 2026-10-23 — Tela inicial "Pedidos de hoje" para restaurantes (v0.40.0)
+
+Segunda etapa do pedido do Éder ("mais parecido com o iFood"), depois do menu
+lateral (0.39.0). `/dashboard` em contas com Delivery vira duas abas: **Pedidos
+de hoje** (padrão) e **Resultados** (o painel de CRM de antes, intacto). Os
+pedidos do dia (`created_at` >= início do dia local, sem cancelados/rascunhos)
+são agrupados em 4 colunas (`src/lib/delivery/home-board.ts`: Novos =
+pending_confirmation+confirmed, Em preparo = in_production+ready, Saiu =
+out_for_delivery, Concluídos = delivered) e atualizam por Realtime em
+`delivery_orders` (com 600 ms de espera, porque o pedido e os itens são gravados
+com milissegundos de diferença) e ao voltar para a aba. O botão do cartão
+anda uma etapa na escada real de status pelo mesmo `PATCH
+/api/delivery/orders/:id`; "Concluir" pula direto para entregue (a API aceita
+qualquer transição). Retirada (sem endereço) pula "saiu para entrega".
+Observação de design: nesta conta a equipe NUNCA avançava status (183 de 183
+pedidos ficavam "confirmado"), então se continuarem sem clicar, tudo do dia fica
+em "Novos" — o selo de tempo e o botão "Concluir" estão aí pra facilitar a
+adoção, mas é comportamento da equipe, não do sistema.
+Verificado visualmente com uma página temporária (apagada) e pedidos de exemplo,
+em tema escuro, claro e largura de celular (390px). Isso achou um erro real de
+contraste no tema claro, corrigido nos selos compartilhados
+(`ElapsedBadge`, `PaymentStatusBadge`). Aprendizado: o modo do app é o atributo
+`data-mode` — a variante `dark:` do Tailwind NÃO funciona aqui (ela espera a
+classe `.dark`, que nunca é aplicada); use `[html[data-mode=light]_&]:...`.
+Não verificado com login real (sem credenciais de um usuário do restaurante):
+a carga dos dados reais (consulta com RLS) e o clique nos botões só foram
+cobertos por testes e pela lógica já usada no quadro de Operação.
+Fica pendente: o estilo iFood no cardápio público do cliente (capa, abas de
+categoria, carrinho fixo) e o selo "Beta" em Pedidos.
+
 ### 2026-10-23 — Menu lateral simplificado para restaurantes (v0.39.0)
 
 Pedido do Éder: deixar o app "mais parecido com o iFood" pra equipe não se

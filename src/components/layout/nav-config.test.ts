@@ -13,12 +13,12 @@ describe('buildNavGroups', () => {
     expect(groups.some((g) => g.collapsible)).toBe(false)
   })
 
-  it('puts the daily restaurant screens first for Delivery accounts: Pedidos, Caixa de entrada, Cardápio, Painel', () => {
+  it('puts the daily restaurant screens first for Delivery accounts: Início, Pedidos, Caixa de entrada, Cardápio', () => {
     const [primary] = buildNavGroups(true)
     expect(primary!.labelKey).toBeNull()
     expect(primary!.collapsible).toBeUndefined()
-    expect(primary!.items.map((i) => i.href)).toEqual(['/delivery', '/inbox', '/delivery/cardapio', '/dashboard'])
-    expect(primary!.items[0]!.labelKey).toBe('orders')
+    expect(primary!.items.map((i) => i.href)).toEqual(['/dashboard', '/delivery', '/inbox', '/delivery/cardapio'])
+    expect(primary!.items.map((i) => i.labelKey)).toEqual(['home', 'orders', 'inbox', 'cardapio'])
   })
 
   it('tucks the CRM tooling under one collapsible "Mais ferramentas" group', () => {

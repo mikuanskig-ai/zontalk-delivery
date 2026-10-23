@@ -33,8 +33,8 @@ describe('Sidebar — account with the Delivery module', () => {
     h.modules = ['delivery']
   })
 
-  it('shows the daily screens first, in order: Pedidos, Caixa de entrada, Cardápio, Painel', () => {
-    const idx = order(render(), ['orders', 'inbox', 'cardapio', 'dashboard'])
+  it('shows the daily screens first, in order: Início, Pedidos, Caixa de entrada, Cardápio', () => {
+    const idx = order(render(), ['home', 'orders', 'inbox', 'cardapio'])
     expect(idx.every((i) => i > -1)).toBe(true)
     expect([...idx].sort((a, b) => a - b)).toEqual(idx)
   })
