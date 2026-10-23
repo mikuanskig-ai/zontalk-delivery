@@ -2,31 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useTotalUnread } from "@/hooks/use-total-unread";
 import { hasModule } from "@/lib/accounts/modules";
 import {
-  Bot,
-  BookOpen,
+  ChevronDown,
   Crown,
-  GitBranch,
-  LayoutDashboard,
-  MessageSquare,
-  Radio,
   Settings,
   Shield,
   ShieldCheck,
   User,
   UserCog,
-  Users,
   UsersRound,
-  UtensilsCrossed,
-  Workflow,
   X,
-  Zap,
 } from "lucide-react";
+import { buildNavGroups, pathMatchesItem, type NavItem } from "./nav-config";
 import type { AccountRole } from "@/lib/auth/roles";
 
 // Per-role chip metadata used in the sidebar's account strip + the
@@ -72,68 +64,9 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 
-interface NavItem {
-  href: string;
-  labelKey: string;
-  icon: typeof LayoutDashboard;
-  /**
-   * When true, the nav row renders a small "Beta" chip after the label.
-   * Purely informational — doesn't affect routing or access.
-   */
-  beta?: boolean;
-}
-
-interface NavGroup {
-  /** null renders no header — used for the top, ungrouped block and
-   *  for single-item groups (Delivery) where a label would be noise. */
-  labelKey: string | null;
-  items: NavItem[];
-}
-
-// Grouped so related messaging tools (Broadcasts/Automations/Flows/
-// Agents) read as one section instead of 4 unrelated top-level items
-// (UX audit Parte 1 — "mensageria está espalhada"). Notifications
-// moved to the header bell; Delivery (opt-in, migration 041) is
-// appended conditionally inside the component — see `navGroups` below.
-const BASE_NAV_GROUPS: NavGroup[] = [
-  {
-    labelKey: null,
-    items: [
-      { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
-      { href: "/inbox", labelKey: "inbox", icon: MessageSquare },
-      { href: "/contacts", labelKey: "contacts", icon: Users },
-      { href: "/pipelines", labelKey: "pipelines", icon: GitBranch },
-    ],
-  },
-  {
-    labelKey: "groupMessaging",
-    items: [
-      { href: "/broadcasts", labelKey: "broadcasts", icon: Radio },
-      { href: "/automations", labelKey: "automations", icon: Zap },
-      { href: "/flows", labelKey: "flows", icon: Workflow, beta: true },
-      { href: "/agents", labelKey: "aiAgents", icon: Bot },
-    ],
-  },
-];
-
-const DELIVERY_NAV_ITEM: NavItem = {
-  href: "/delivery",
-  labelKey: "delivery",
-  icon: UtensilsCrossed,
-  beta: true,
-};
-
-// Promoted out of a sub-page reachable only via a back-arrow inside
-// Pedidos (UX request 2026-08-11) — a direct entry point for the
-// menu/catalog CRUD, right below Delivery. No beta chip: it's not a
-// new feature, just a new place to reach an existing one. Gated by
-// the same Delivery module flag since the data (products/categories)
-// lives there — see navGroups below.
-const CARDAPIO_NAV_ITEM: NavItem = {
-  href: "/delivery/cardapio",
-  labelKey: "cardapio",
-  icon: BookOpen,
-};
+// Remembers whether the viewer left "Mais ferramentas" open. A per-viewer
+// convenience only — storage can be blocked, so every access is guarded.
+const MORE_TOOLS_STORAGE_KEY = "zdelivery.sidebar.moreTools";
 
 const BASE_BOTTOM_NAV_ITEMS: NavItem[] = [
   { href: "/settings", labelKey: "settings", icon: Settings },
@@ -160,20 +93,41 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { profile, profileLoading, account, accountRole } = useAuth();
   const totalUnread = useTotalUnread();
-  // Delivery only shows once the account has turned the module on
-  // (Settings → Modules) — everyone else's sidebar is unaffected. It
-  // renders as its own unlabeled group (a single item doesn't need a
-  // section header) so it stays visually separated from Messaging.
-  const navGroups = useMemo(
-    () =>
-      hasModule(account, "delivery")
-        ? [
-            ...BASE_NAV_GROUPS,
-            { labelKey: null, items: [DELIVERY_NAV_ITEM, CARDAPIO_NAV_ITEM] },
-          ]
-        : BASE_NAV_GROUPS,
-    [account],
+  // Delivery only changes the layout once the account has turned the
+  // module on (Settings → Modules) — everyone else's sidebar is
+  // unaffected. See buildNavGroups for the delivery-first arrangement.
+  const hasDelivery = hasModule(account, "delivery");
+  const navGroups = useMemo(() => buildNavGroups(hasDelivery), [hasDelivery]);
+  const moreItems = useMemo(
+    () => navGroups.find((g) => g.collapsible)?.items ?? [],
+    [navGroups],
   );
+  const activeInMore = moreItems.some((i) => pathMatchesItem(pathname, i.href));
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(MORE_TOOLS_STORAGE_KEY) === "1") setMoreOpen(true);
+    } catch {
+      // Storage unavailable — stays closed, which is the safe default.
+    }
+  }, []);
+  // Landing on a page inside the group (a link, a bookmark) must reveal
+  // where you are. Only forces it open on navigation — the viewer can
+  // still collapse it afterwards.
+  useEffect(() => {
+    if (activeInMore) setMoreOpen(true);
+  }, [pathname, activeInMore]);
+  const toggleMore = () => {
+    setMoreOpen((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(MORE_TOOLS_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        // Per-viewer convenience only.
+      }
+      return next;
+    });
+  };
   // Cardápio's href ("/delivery/cardapio") is a sub-path of Delivery's
   // ("/delivery") — without this, the plain startsWith check below
   // would light up both rows at once while on the Cardápio page. Only
@@ -281,14 +235,31 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           {navGroups.map((group, groupIndex) => (
             <ul
               key={group.labelKey ?? `group-${groupIndex}`}
+              id={group.collapsible ? "sidebar-more-tools" : undefined}
               className={cn("flex flex-col gap-1", groupIndex > 0 && "mt-4")}
             >
-              {group.labelKey && (
+              {group.labelKey && group.collapsible && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={toggleMore}
+                    aria-expanded={moreOpen}
+                    aria-controls="sidebar-more-tools"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:py-2"
+                  >
+                    <ChevronDown
+                      className={cn("h-4 w-4 transition-transform", !moreOpen && "-rotate-90")}
+                    />
+                    <span className="flex-1">{t(group.labelKey)}</span>
+                  </button>
+                </li>
+              )}
+              {group.labelKey && !group.collapsible && (
                 <li className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                   {t(group.labelKey)}
                 </li>
               )}
-              {group.items.map((item) => {
+              {(!group.collapsible || moreOpen) && group.items.map((item) => {
                 const isActive =
                   pathname === item.href ||
                   (item.href !== "/dashboard" &&

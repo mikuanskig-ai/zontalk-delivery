@@ -2,6 +2,20 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.39.0] — 2026-10-23
+
+### Alterado
+
+- **Menu lateral mais simples para restaurantes (estilo painel do iFood).**
+  Pedido do Éder: a equipe se perdia entre tantos itens de CRM só pra tirar um
+  pedido. Em contas com o módulo Delivery, o menu agora mostra sempre, e nessa
+  ordem, o que o restaurante usa todo dia: **Pedidos, Caixa de entrada,
+  Cardápio e Painel**. Contatos, Funis, Transmissões, Automações, Fluxos e
+  Agentes de IA ficam num grupo **"Mais ferramentas"**, que começa fechado,
+  lembra se você deixou aberto e abre sozinho quando você entra em uma dessas
+  páginas. Nada foi removido — toda tela continua a um clique. Contas sem
+  Delivery ficam exatamente como estavam.
+
 ## [0.38.0] — 2026-10-06
 
 ### Adicionado

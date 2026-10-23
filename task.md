@@ -144,6 +144,25 @@
 
 ## Feitas
 
+### 2026-10-23 — Menu lateral simplificado para restaurantes (v0.39.0)
+
+Pedido do Éder: deixar o app "mais parecido com o iFood" pra equipe não se
+confundir com tantos processos. Escopo escolhido por ele: **painel do dono
+primeiro** (não o cardápio público), e a dor principal é o **menu lateral com
+itens demais**. Em contas com o módulo Delivery o menu virou: Pedidos, Caixa
+de entrada, Cardápio, Painel (sempre à vista) + grupo recolhível "Mais
+ferramentas" (Contatos, Funis, Transmissões, Automações, Fluxos, Agentes de
+IA), fechado por padrão, com a escolha lembrada em localStorage e abertura
+automática ao entrar numa página do grupo. Contas sem Delivery não mudam.
+Configuração do menu extraída para `src/components/layout/nav-config.ts`
+(testável). Verificado: testes de estrutura com o `Sidebar` real e um teste
+temporário em DOM simulado do abrir/fechar/lembrar/abrir-sozinho (não
+commitado, exigia jsdom).
+Fica pendente, por ser decisão de design maior: (a) tela inicial focada nos
+pedidos do dia em vez do funil de CRM, (b) o estilo iFood no cardápio público
+do cliente (capa, abas de categoria, barra de carrinho fixa), (c) o selo
+"Beta" no item Pedidos, mantido por ora.
+
 ### 2026-10-06 — Histórico do follow-up na aba Follow-up (v0.38.0)
 
 Pedido do Eder após a auditoria: precisava ver o que o follow-up fez, por
