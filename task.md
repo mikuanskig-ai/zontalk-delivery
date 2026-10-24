@@ -21,36 +21,20 @@
   verdade; precisa do Éder/Concórdia escanearem o QR (Configurações → WhatsApp).
   Proposta (não feita): faixa vermelha no app quando a sessão do WuzAPI não
   estiver conectada, do mesmo jeito que o monitor do agente de impressão.
-- [ ] **Agente de impressão 1.4.0 (ícone na bandeja + painel, sem janela
-  preta) — pronto e testado, falta publicar no manifesto (24/10).** Pedido do
-  Éder: o console passava uma visão estranha da empresa. Código em
-  `clients/zontalk/zdelivery-print-agent` (commit `f620d36`): ícone do Zontalk
-  ao lado do relógio (verde/âmbar/vermelho/cinza), janela de painel (status em
-  português, últimos pedidos, configurações no lugar do assistente de console,
-  registro), avisos do Windows quando algo falha, `.exe` com ícone e
-  propriedades próprias, e uma segunda abertura só mostra a janela do agente
-  que já está rodando. Testado: 259 testes unitários, `scripts/e2e/smoke.js`
-  (40 verificações com o `.exe` de verdade contra API/impressora falsas) e
-  atualização real 1.3.3 → 1.4.0. **Por que ainda não está no ar:** a 1.3.3
-  (publicada 23/10 ~18h) é a "ponte" — o script de atualização dela volta
-  sozinho para a versão anterior se a nova não abrir em 90 s, mas esse script
-  é o do exe que está SENDO SUBSTITUÍDO; então a 1.4.0 só tem essa rede de
-  segurança em PCs que já passaram pela 1.3.3. Não dá para ver a versão do
-  agente pelo servidor (sem log de acesso no Caddy) e hoje NENHUM agente está
-  rodando (Concórdia: último sinal 18/10 15:17; conta de teste: 09/09) — então
-  a regra é: primeiro o PC da loja abrir o agente uma vez com a 1.3.3 no ar
-  (ele se atualiza na primeira checagem), depois publicar a 1.4.0, de manhã
-  cedo e com o Éder avisado, acompanhando
-  `print_configs.last_polled_at` / coluna "Impressão" no admin. Publicar =
-  subir o `.exe` primeiro e o manifesto por último em
-  `/opt/wacrm/public/downloads/` (só sobrescrever nomes que já existem).
-  **Não coberto pelos testes:** impressora térmica de verdade, o aviso do
-  Windows aparecendo no PC da loja e o antivírus de lá. Se o PC não voltar
-  sozinho: o exe anterior fica ao lado como `zontalk-print-agent.exe.previous`.
-  Observação: em papel de 58 mm (32 colunas) as linhas de item saem com 36
-  caracteres (colunas de valor têm 6 de largura, `R$ 28,00` tem 8) — só
-  quebra se a impressora do Concórdia realmente couber 32 por linha; a
-  "página de teste" nova mostra isso.
+- [x] **Agente de impressão 1.4.0 (ícone na bandeja + painel, sem janela
+  preta) — PUBLICADA em 24/10 (~21h50 BRT) a pedido do Éder.** Manifesto e
+  `.exe` no ar em `/opt/wacrm/public/downloads/` (sha256 `90bb8760…`);
+  backups da 1.3.3 como `*.bak-20261024-1.3.3`. Código em
+  `clients/zontalk/zdelivery-print-agent` (commit `f620d36`). Na hora da
+  publicação nenhum agente estava rodando (Concórdia pausou o uso; último sinal
+  18/10), então a 1.4.0 chega no PC da loja quando o agente for aberto de novo:
+  se o exe lá for a 1.3.2, o salto é direto pelo script antigo (sem desfazer
+  automático — testado localmente, funciona). Não coberto pelos testes:
+  impressora térmica real, aviso do Windows no PC da loja e o antivírus de lá;
+  se o PC não voltar sozinho, o exe anterior fica como
+  `zontalk-print-agent.exe.previous`. Observação: em papel de 58 mm as linhas
+  de item saem com 36 caracteres (valores têm coluna de 6, `R$ 28,00` tem 8) —
+  a "página de teste" nova mostra se quebra na impressora deles.
 - [ ] **Deploy por `git pull` quebrado na VPS nova (zontalk-core-vps)** — o
   remoto `origin` de `/opt/wacrm` usa o alias `github-wacrm-deploy` e a chave
   de deploy que só existiam na VPS antiga (nada de `~/.ssh/config` nem chave
