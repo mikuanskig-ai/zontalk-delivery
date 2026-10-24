@@ -6,6 +6,33 @@
 
 ## Pendentes
 
+- [ ] **Agente de impressão 1.4.0 (ícone na bandeja + painel, sem janela
+  preta) — pronto e testado, falta publicar no manifesto (24/10).** Pedido do
+  Éder: o console passava uma visão estranha da empresa. Código em
+  `clients/zontalk/zdelivery-print-agent` (commit `f620d36`): ícone do Zontalk
+  ao lado do relógio (verde/âmbar/vermelho/cinza), janela de painel (status em
+  português, últimos pedidos, configurações no lugar do assistente de console,
+  registro), avisos do Windows quando algo falha, `.exe` com ícone e
+  propriedades próprias, e uma segunda abertura só mostra a janela do agente
+  que já está rodando. Testado: 259 testes unitários, `scripts/e2e/smoke.js`
+  (40 verificações com o `.exe` de verdade contra API/impressora falsas) e
+  atualização real 1.3.3 → 1.4.0. **Por que ainda não está no ar:** a 1.3.3
+  (publicada 23/10 ~18h) é a "ponte" — o script de atualização dela volta
+  sozinho para a versão anterior se a nova não abrir em 90 s, mas esse script
+  é o do exe que está SENDO SUBSTITUÍDO; então a 1.4.0 só tem essa rede de
+  segurança em PCs que já passaram pela 1.3.3. Não dá para ver a versão do
+  agente pelo servidor (sem log de acesso no Caddy), então o certo é publicar
+  de manhã cedo (antes do almoço), com o Éder avisado, e acompanhar
+  `print_configs.last_polled_at` / coluna "Impressão" no admin. Publicar =
+  subir o `.exe` primeiro e o manifesto por último em
+  `/opt/wacrm/public/downloads/` (só sobrescrever nomes que já existem).
+  **Não coberto pelos testes:** impressora térmica de verdade, o aviso do
+  Windows aparecendo no PC da loja e o antivírus de lá. Se o PC não voltar
+  sozinho: o exe anterior fica ao lado como `zontalk-print-agent.exe.previous`.
+  Observação: em papel de 58 mm (32 colunas) as linhas de item saem com 36
+  caracteres (colunas de valor têm 6 de largura, `R$ 28,00` tem 8) — só
+  quebra se a impressora do Concórdia realmente couber 32 por linha; a
+  "página de teste" nova mostra isso.
 - [ ] **Deploy por `git pull` quebrado na VPS nova (zontalk-core-vps)** — o
   remoto `origin` de `/opt/wacrm` usa o alias `github-wacrm-deploy` e a chave
   de deploy que só existiam na VPS antiga (nada de `~/.ssh/config` nem chave
