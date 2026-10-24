@@ -6,6 +6,21 @@
 
 ## Pendentes
 
+- [ ] **URGENTE — WhatsApp do Concórdia fora do ar desde 15/10 (descoberto
+  em 23/10, olhando o monitor do agente de impressão).** O banco não tem NENHUMA
+  mensagem (entrada ou saída), conversa, contato, pedido ou uso de IA depois de
+  15/10 ~14:35 (BRT) — para a conta do Concórdia e para todas as outras. No
+  WuzAPI da VPS nova: 13 linhas em `users`, nenhuma com `connected = 1`, e a
+  tabela `whatsmeow_device` está VAZIA (sem aparelho pareado) — então nenhuma
+  sessão consegue reconectar sozinha, precisa de QR code novo. Enquanto isso o
+  CRM continua mostrando "conectado": `whatsapp_config.status` ficou com o valor
+  de 14/09 e ninguém confere o estado real da sessão. Não sei a causa (as
+  mensagens param 6 dias antes da migração de 21/10; pode ter sido logout do
+  WhatsApp, troca de aparelho, ou a queda da VPS antiga em ~18/10).
+  **Não reconectei nada** — reconectar faz a IA voltar a responder clientes de
+  verdade; precisa do Éder/Concórdia escanearem o QR (Configurações → WhatsApp).
+  Proposta (não feita): faixa vermelha no app quando a sessão do WuzAPI não
+  estiver conectada, do mesmo jeito que o monitor do agente de impressão.
 - [ ] **Agente de impressão 1.4.0 (ícone na bandeja + painel, sem janela
   preta) — pronto e testado, falta publicar no manifesto (24/10).** Pedido do
   Éder: o console passava uma visão estranha da empresa. Código em
@@ -21,8 +36,11 @@
   sozinho para a versão anterior se a nova não abrir em 90 s, mas esse script
   é o do exe que está SENDO SUBSTITUÍDO; então a 1.4.0 só tem essa rede de
   segurança em PCs que já passaram pela 1.3.3. Não dá para ver a versão do
-  agente pelo servidor (sem log de acesso no Caddy), então o certo é publicar
-  de manhã cedo (antes do almoço), com o Éder avisado, e acompanhar
+  agente pelo servidor (sem log de acesso no Caddy) e hoje NENHUM agente está
+  rodando (Concórdia: último sinal 18/10 15:17; conta de teste: 09/09) — então
+  a regra é: primeiro o PC da loja abrir o agente uma vez com a 1.3.3 no ar
+  (ele se atualiza na primeira checagem), depois publicar a 1.4.0, de manhã
+  cedo e com o Éder avisado, acompanhando
   `print_configs.last_polled_at` / coluna "Impressão" no admin. Publicar =
   subir o `.exe` primeiro e o manifesto por último em
   `/opt/wacrm/public/downloads/` (só sobrescrever nomes que já existem).
