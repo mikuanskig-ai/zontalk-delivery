@@ -2,6 +2,25 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.41.1] — 2026-10-27
+
+### Corrigido
+
+- **Salão: câmera do leitor de QR bloqueada.** O cabeçalho de segurança do
+  sistema negava a câmera para todas as páginas (`camera=()`), então "Escanear
+  mesa" nunca conseguiria abrir a câmera. Agora a câmera vale só para o próprio
+  endereço (`camera=(self)`).
+- **Salão: ícones do app.** O `salao.webmanifest` apontava para uma imagem de
+  96 px declarada com tamanho errado (aviso no console e app não instalável);
+  agora usa ícones de 192 e 512 px.
+
+### Operação
+
+- Depois de aplicar as migrations do Salão no banco, foi preciso recarregar o
+  cache de esquema do PostgREST (`NOTIFY pgrst, 'reload schema'`); sem isso a
+  primeira tentativa de abrir o caixa devolveu 500 ("table cash_sessions not in
+  the schema cache"). Fica no roteiro de deploy de migrations com tabela nova.
+
 ## [0.41.0] — 2026-10-27
 
 ### Adicionado
