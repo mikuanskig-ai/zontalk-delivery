@@ -6,16 +6,16 @@
 
 ## Pendentes
 
-- [ ] **Módulo Salão (v0.41.0) — falta só colocar no ar e ensaiar com impressora
-  de verdade.** Código, migrations 088/089 e Print Agent 1.5.0 prontos e
-  testados (ver "Feitas"). Para ligar: (1) aplicar as migrations 088 e 089 no
-  banco da VPS ANTES do deploy; (2) deploy do app (procedimento seguro do
-  zontalk-core-vps); (3) incluir `salao` no plano da conta (o gatilho da 063
-  impede ligar módulo que o plano não tem — Admin › Planos); (4) publicar o
-  agente 1.5.0 (exe primeiro, manifesto por último); (5) ligar o módulo na
-  conta de teste e fazer o ensaio completo com celular e impressora de
-  verdade (conectar aparelho, QR, 2 rodadas na cozinha, pré-conta no caixa,
-  fechar com Pix + dinheiro, fechar o caixa); só depois no restaurante.
+- [ ] **Módulo Salão (v0.41.0) — NO AR desde 27/10 só na conta de teste; falta o
+  ensaio com celular e impressora de verdade.** Feito em 27/10: migrations
+  088/089 aplicadas no banco da VPS; app 0.41.0 no ar (cópia do build anterior
+  em `/opt/wacrm-next-prev`); Print Agent 1.5.0 publicado (backups
+  `*.bak-20261027-1.4.0`); módulo ligado só na conta de teste (Guilherme
+  Mikuanski, d4f07273) com o plano novo "Teste Salão" (cópia do Legacy +
+  salao). Concórdia e Ederson continuam no plano Legacy, sem o módulo.
+  Falta: ensaio completo (conectar aparelho, QR, 2 rodadas na cozinha,
+  pré-conta no caixa, fechar com Pix + dinheiro, fechar o caixa); só depois
+  ligar no restaurante (incluir `salao` no plano dele).
   Não testado ainda: impressora térmica real com os tickets novos (bobina de
   58 mm: conferir se "MESA 12" em letra dobrada e a pré-conta cabem), câmera
   do app no iPhone, app instalado na tela inicial.
