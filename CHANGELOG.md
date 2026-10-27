@@ -2,6 +2,77 @@
 
 > Este arquivo é sempre escrito em português.
 
+## [0.41.0] — 2026-10-27
+
+### Adicionado
+
+- **Módulo Salão: o restaurante inteiro dentro do Z-Delivery.** Ideia do Éder
+  de atender o restaurante do começo ao fim: delivery, mesas, garçom e caixa
+  num sistema só. Módulo novo, desligado por padrão (Configurações › Módulos ›
+  Salão; precisa estar no plano da conta).
+  - **Mesas e comandas.** Cada mesa tem a sua comanda. O mapa do salão mostra
+    as mesas por área: **azul = livre, verde = comanda aberta, amarelo = pediu
+    a conta**, com total parcial, pessoas e há quanto tempo está aberta.
+    Venda de balcão é uma comanda sem mesa. Dá para mudar a comanda de mesa e
+    **juntar duas mesas** (os itens vão para a comanda de destino).
+  - **Garçom pelo celular, sem e-mail e senha.** O dono gera um código de 6
+    números (vale 10 minutos, uso único) em Configurações › Salão ›
+    Aparelhos; o celular digita o código uma vez e depois cada pessoa entra só
+    com o **PIN** dela (4 a 6 números). 5 erros de PIN travam o aparelho por 1
+    minuto; dá para desconectar um celular perdido. O dono ou admin logado no
+    painel entra no salão como gerente, sem PIN.
+  - **Lançar pedidos.** O garçom escolhe do cardápio que já existe (com
+    adicionais obrigatórios/opcionais, observação e preço do dia), e cada
+    "Enviar para a cozinha" vira uma **rodada**. O preço é sempre calculado no
+    servidor — o celular só manda o que foi escolhido.
+  - **QR code em cada mesa.** Folha A4 para imprimir (Configurações › Salão ›
+    Mesas › Imprimir QR codes). O garçom escaneia (câmera dentro do app, ou a
+    câmera do celular quando o aparelho já está conectado) e a comanda da mesa
+    abre. Um cliente que escanear só vê o cardápio público — não faz pedido.
+  - **Permissões configuráveis.** Garçom, caixa e gerente; o dono marca, por
+    função, o que pode fazer (abrir comanda, lançar itens, cancelar item,
+    desconto, fechar comanda, abrir/fechar caixa, sangria). Padrão: o garçom
+    não fecha comanda nem cancela item; o caixa faz tudo menos reabrir
+    comanda (só gerente). A regra é conferida no servidor em toda chamada.
+  - **Caixa.** Fechar comanda com **vários pagamentos** (Pix, crédito, débito,
+    dinheiro com cálculo de **troco**), **taxa de serviço** configurável
+    (padrão 10%, pode tirar por comanda), desconto, valor **por pessoa**.
+    **Caixa do dia:** abertura com fundo de troco, sangria e suprimento, e
+    fechamento com contagem do dinheiro e diferença (sobrou/faltou). O
+    relatório soma salão, balcão e delivery do período (a forma de pagamento
+    do delivery é texto livre, então vai separada e marcada "a conferir" e não
+    entra na conta do dinheiro da gaveta).
+  - **Impressão em duas impressoras.** Cada rodada sai na impressora da
+    **cozinha** (mesa em letra grande, garçom, só os itens novos, sem preços);
+    item cancelado gera um aviso "NÃO PREPARAR"; a **pré-conta** e o
+    **fechamento do caixa** saem na impressora do **caixa**. Pré-conta e
+    relatório também abrem para imprimir pelo navegador.
+  - **Painel inicial:** cartão "Salão hoje" (comandas abertas, em aberto,
+    fechadas e vendido hoje) quando o módulo está ligado.
+- **Print Agent 1.5.0** (publicação separada): imprime esses tickets e aceita
+  duas impressoras por computador (cozinha e caixa na mesma, em outra, ou o
+  caixa em outro PC), cada uma com sua página de teste.
+
+### Alterado
+
+- A fila de impressão (`print_jobs`) deixou de exigir um pedido de delivery por
+  trás: ganhou `kind` (tipo), `target` (cozinha/caixa) e `payload` (conteúdo
+  congelado do ticket). O agente passa a declarar a versão e as impressoras
+  que tem em cada consulta; **agente antigo (até 1.4.x) continua recebendo só
+  pedidos de delivery na cozinha, exatamente como antes**.
+
+### Interno
+
+- Migrations 088 (tabelas do salão e funções SQL atômicas: lançar rodada,
+  cancelar item, juntar mesa, fechar comanda, fechar/reabrir caixa) e 089 (fila
+  de impressão). Uma comanda aberta por mesa é garantida pelo banco.
+- Testes: o SQL inteiro roda num Postgres em memória (PGlite) em
+  `src/lib/salao/sql.test.ts` (73 verificações); permissões, criptografia do
+  acesso, carrinho, tickets, rotas (conectar, PIN, barreira de permissão) e o
+  app do salão e as configurações montados de verdade em jsdom.
+- Novas dependências: `qrcode` (QR das mesas), `jsqr` (leitura pela câmera) e,
+  de desenvolvimento, `@electric-sql/pglite`.
+
 ## [0.40.1] — 2026-10-23
 
 ### Corrigido

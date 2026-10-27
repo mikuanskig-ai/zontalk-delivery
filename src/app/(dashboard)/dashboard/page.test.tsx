@@ -12,6 +12,9 @@ vi.mock('@/hooks/use-auth', () => ({ useAuth: () => h.auth }))
 vi.mock('@/components/delivery/today-orders-home', () => ({
   TodayOrdersHome: () => React.createElement('div', { 'data-testid': 'home' }, 'HOME'),
 }))
+vi.mock('@/components/salao/salao-today-card', () => ({
+  SalaoTodayCard: () => React.createElement('div', { 'data-testid': 'salao-card' }, 'SALAO'),
+}))
 
 // The CRM dashboard (the "Resultados" tab / non-Delivery accounts) loads a
 // lot of data; keeping every load pending leaves it in its loading state,
@@ -75,6 +78,22 @@ describe('DashboardPage', () => {
     expect(errors).toEqual([])
     expect(el.querySelector('[data-testid="home"]')).toBeNull()
     restore()
+  })
+
+  it("shows the Salão card above today's orders only when the Salão module is on", async () => {
+    h.auth.account = withModules(['delivery', 'salao'])
+    const on = await mount()
+    expect(on.errors).toEqual([])
+    expect(on.el.querySelector('[data-testid="salao-card"]')).not.toBeNull()
+    expect(on.el.querySelector('[data-testid="home"]')).not.toBeNull()
+    on.restore()
+
+    document.body.innerHTML = ''
+    h.auth.account = withModules(['delivery'])
+    const off = await mount()
+    expect(off.el.querySelector('[data-testid="salao-card"]')).toBeNull()
+    expect(off.el.querySelector('[data-testid="home"]')).not.toBeNull()
+    off.restore()
   })
 
   it('leaves an account without Delivery on the original dashboard — no tabs, no orders screen', async () => {

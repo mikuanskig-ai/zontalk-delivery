@@ -46,6 +46,7 @@ import { useTranslations } from 'next-intl'
 import { hasModule } from '@/lib/accounts/modules'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { TodayOrdersHome } from '@/components/delivery/today-orders-home'
+import { SalaoTodayCard } from '@/components/salao/salao-today-card'
 
 type RangeDays = 7 | 30 | 90
 
@@ -69,6 +70,7 @@ export default function DashboardPage() {
         <TabsTrigger value="results">{tHome('tabResults')}</TabsTrigger>
       </TabsList>
       <TabsContent value="today" className="mt-4">
+        {hasModule(account, 'salao') ? <SalaoTodayCard /> : null}
         <TodayOrdersHome />
       </TabsContent>
       <TabsContent value="results" className="mt-4">

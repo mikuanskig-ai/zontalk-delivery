@@ -6,6 +6,22 @@
 
 ## Pendentes
 
+- [ ] **Módulo Salão (v0.41.0) — falta só colocar no ar e ensaiar com impressora
+  de verdade.** Código, migrations 088/089 e Print Agent 1.5.0 prontos e
+  testados (ver "Feitas"). Para ligar: (1) aplicar as migrations 088 e 089 no
+  banco da VPS ANTES do deploy; (2) deploy do app (procedimento seguro do
+  zontalk-core-vps); (3) incluir `salao` no plano da conta (o gatilho da 063
+  impede ligar módulo que o plano não tem — Admin › Planos); (4) publicar o
+  agente 1.5.0 (exe primeiro, manifesto por último); (5) ligar o módulo na
+  conta de teste e fazer o ensaio completo com celular e impressora de
+  verdade (conectar aparelho, QR, 2 rodadas na cozinha, pré-conta no caixa,
+  fechar com Pix + dinheiro, fechar o caixa); só depois no restaurante.
+  Não testado ainda: impressora térmica real com os tickets novos (bobina de
+  58 mm: conferir se "MESA 12" em letra dobrada e a pré-conta cabem), câmera
+  do app no iPhone, app instalado na tela inicial.
+  Fora de escopo (decidido): NFC-e/SAT; modo offline completo; cliente pedir
+  pelo QR da mesa.
+
 - [ ] **URGENTE — WhatsApp do Concórdia fora do ar desde 15/10 (descoberto
   em 23/10, olhando o monitor do agente de impressão).** O banco não tem NENHUMA
   mensagem (entrada ou saída), conversa, contato, pedido ou uso de IA depois de
@@ -185,6 +201,47 @@
   não é sintoma de algo pior.
 
 ## Feitas
+
+### 2026-10-27 — Módulo Salão: mesas, comandas, garçom por PIN e caixa (v0.41.0)
+
+Pedido do Éder (ideia que teve deitado): atender o restaurante inteiro dentro
+do Z-Delivery — impressão, atendimento online, garçom, comanda e caixa. Plano
+aprovado em 27/10 (tela repartida do garçom no celular com PIN; cozinha e caixa
+em impressoras separadas; caixa único com delivery; entrega de uma vez só com o
+módulo desligado). Detalhes do que existe estão no CHANGELOG 0.41.0.
+
+- **Banco:** migration 088 (salao_settings, salao_tables com QR, salao_staff
+  com PIN, salao_devices/pairing_codes, cash_sessions/cash_movements,
+  salao_tabs/rounds/tab_items/payments; funções atômicas `salao_add_round`,
+  `salao_cancel_item`, `salao_transfer_tab`, `salao_close_tab`,
+  `salao_reopen_tab`, `salao_close_cash_session`; uma comanda aberta por mesa
+  garantida por índice único). Migration 089 (print_jobs com kind/target/
+  payload, `claim_print_jobs` filtrando por tipo e impressora — o padrão é o de
+  agente antigo, então um agente que não declara nada nunca recebe ticket de
+  salão).
+- **Servidor:** `/api/salao/*` (acesso por aparelho + PIN, ou admin do painel
+  como gerente; permissões por papel configuráveis, conferidas no servidor;
+  preço sempre recalculado no servidor), `/m/<qr>`, folha de QR em
+  `/delivery/salao-qr`, Configurações › Salão, cartão "Salão hoje" no painel
+  inicial, item "Salão" no menu lateral.
+- **App `/salao`** (celular, tablet ou PC do caixa): mapa verde/azul/amarelo,
+  comanda, escolher itens, pagamento com troco, caixa do dia, leitura de QR.
+- **Print Agent 1.5.0** (repositório `zdelivery-print-agent`, commit 06e9706,
+  AINDA NÃO publicado): declara versão/impressoras a cada consulta, imprime os
+  4 tickets novos, duas impressoras por computador.
+- **Testes:** 1.600+ no app (SQL inteiro num Postgres em memória com PGlite, 73
+  verificações; app do salão e configurações montados em jsdom) e 318 no agente;
+  e2e do exe real contra o servidor de mentira com duas impressoras (59
+  verificações) e salto de atualização 1.4.0 → 1.5.0 com o exe real.
+- **Desvios do plano (sem impacto):** a leitura de mudanças do celular é a
+  consulta completa a cada 4 s (não `?since=`; a resposta é pequena); os textos
+  do app do garçom estão em português direto no código (não nos `messages/`),
+  só o menu lateral, Módulos e Configurações usam i18n; a validação de adicionais
+  do salão é própria (`src/lib/salao/cart.ts`) em vez de extrair a do pedido
+  público, para não mexer num caminho que já funciona em produção.
+- Ensaio SQL feito em Postgres em memória (PGlite), não no banco da VPS: criar
+  um banco de teste no Postgres de produção foi barrado pelo classificador.
+
 
 ### 2026-10-23 — Incidente: home nova quebrou o dashboard (v0.40.1)
 
