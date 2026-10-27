@@ -28,6 +28,7 @@ import { NextResponse } from 'next/server';
 import { requireApiKey } from '@/lib/auth/api-context';
 import { ok, toApiErrorResponse } from '@/lib/api/v1/respond';
 import { touchPrintAgentPoll } from '@/lib/delivery/print-queue';
+import { parseAgentCapabilities } from '@/lib/delivery/print-agent-capabilities';
 
 const PRINT_JOB_LIMIT = 20;
 
@@ -63,7 +64,10 @@ interface ItemRow {
 export async function GET(request: Request) {
   try {
     const ctx = await requireApiKey(request, 'print:read');
-    touchPrintAgentPoll(ctx.accountId);
+    // O que ESTE agente sabe imprimir (módulo Salão, migration 089). Um
+    // agente antigo não manda nada e só recebe delivery na cozinha.
+    const caps = parseAgentCapabilities(new URL(request.url).searchParams);
+    touchPrintAgentPoll(ctx.accountId, { caixa: caps.hasCaixaPrinter });
 
     const nowIso = new Date().toISOString();
     const dueFilter = `next_attempt_at.is.null,next_attempt_at.lte.${nowIso}`;
@@ -91,6 +95,8 @@ export async function GET(request: Request) {
     const { data: jobRows, error: jobsErr } = await ctx.supabase.rpc('claim_print_jobs', {
       p_account_id: ctx.accountId,
       p_limit: PRINT_JOB_LIMIT,
+      p_kinds: caps.kinds,
+      p_targets: caps.targets,
     });
 
     if (jobsErr) {
@@ -104,10 +110,18 @@ export async function GET(request: Request) {
     // RETURNING from the claim UPDATE has no guaranteed order — resort
     // oldest-first (the RPC's own ORDER BY only controls which rows
     // get claimed, not the order they come back in).
-    const jobs = ((jobRows ?? []) as { id: string; order_id: string; created_at: string; attempts: number }[]).sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
-    const orderIds = jobs.map((j) => j.order_id);
+    const jobs = (
+      (jobRows ?? []) as {
+        id: string;
+        order_id: string | null;
+        kind?: string;
+        target?: string;
+        payload?: unknown;
+        created_at: string;
+        attempts: number;
+      }[]
+    ).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const orderIds = jobs.map((j) => j.order_id).filter((id): id is string => !!id);
 
     let orders: OrderRow[] = [];
     let items: ItemRow[] = [];
@@ -148,7 +162,7 @@ export async function GET(request: Request) {
     // dropping a real corrective notice again.
     const cancelledJobIds = jobs
       .filter((j) => {
-        const order = orderById.get(j.order_id);
+        const order = j.order_id ? orderById.get(j.order_id) : undefined;
         if (order?.status !== 'cancelled') return false;
         if (!order.status_changed_at) return false;
         return new Date(j.created_at).getTime() < new Date(order.status_changed_at).getTime();
@@ -163,17 +177,36 @@ export async function GET(request: Request) {
       .select('id', { count: 'exact', head: true })
       .eq('account_id', ctx.accountId)
       .eq('status', 'pending')
+      .in('kind', caps.kinds)
+      .in('target', caps.targets)
       .or(dueFilter);
 
     const servedJobs = jobs
       .filter((j) => !cancelledJobIds.includes(j.id))
       .map((j) => {
-        const order = orderById.get(j.order_id);
+        const kind = j.kind ?? 'delivery_order';
+        // Ticket do salão: o conteúdo já está congelado no job.
+        if (kind !== 'delivery_order') {
+          return {
+            id: j.id,
+            order_id: null,
+            kind,
+            target: j.target ?? 'cozinha',
+            created_at: j.created_at,
+            attempts: j.attempts,
+            receipt: null,
+            ticket: j.payload ?? null,
+          };
+        }
+        const order = j.order_id ? orderById.get(j.order_id) : undefined;
         return {
           id: j.id,
           order_id: j.order_id,
+          kind,
+          target: j.target ?? 'cozinha',
           created_at: j.created_at,
           attempts: j.attempts,
+          ticket: null,
           receipt: order
             ? {
                 status: order.status,

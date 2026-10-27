@@ -1,0 +1,14 @@
+{
+  "name": "Salão",
+  "short_name": "Salão",
+  "description": "Comandas, mesas e caixa do restaurante.",
+  "start_url": "/salao",
+  "scope": "/salao",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    { "src": "/logo-mark.png", "sizes": "any", "type": "image/png", "purpose": "any" }
+  ]
+}

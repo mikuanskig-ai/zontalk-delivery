@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Radio,
+  Store,
   UtensilsCrossed,
   Users,
   Workflow,
@@ -48,6 +49,10 @@ const AGENTS: NavItem = { href: "/agents", labelKey: "aiAgents", icon: Bot };
 const ORDERS: NavItem = { href: "/delivery", labelKey: "orders", icon: UtensilsCrossed, beta: true };
 const CARDAPIO: NavItem = { href: "/delivery/cardapio", labelKey: "cardapio", icon: BookOpen };
 
+// Salão (opt-in module `salao`): the waiter/cashier app lives at /salao, outside the
+// dashboard layout (its own full-screen, phone-first shell).
+const SALAO: NavItem = { href: "/salao", labelKey: "salao", icon: Store };
+
 // Grouped so related messaging tools (Broadcasts/Automations/Flows/
 // Agents) read as one section instead of 4 unrelated top-level items
 // (UX audit Parte 1 — "mensageria está espalhada").
@@ -67,10 +72,14 @@ const BASE_NAV_GROUPS: NavGroup[] = [
  * route stays one click away. Accounts without Delivery keep the
  * original layout untouched.
  */
-export function buildNavGroups(hasDelivery: boolean): NavGroup[] {
-  if (!hasDelivery) return BASE_NAV_GROUPS;
+export function buildNavGroups(hasDelivery: boolean, hasSalao: boolean = false): NavGroup[] {
+  if (!hasDelivery) {
+    if (!hasSalao) return BASE_NAV_GROUPS;
+    const [first, ...rest] = BASE_NAV_GROUPS;
+    return [{ ...first!, items: [DASHBOARD, SALAO, ...first!.items.slice(1)] }, ...rest];
+  }
   return [
-    { labelKey: null, items: [HOME, ORDERS, INBOX, CARDAPIO] },
+    { labelKey: null, items: hasSalao ? [HOME, ORDERS, SALAO, INBOX, CARDAPIO] : [HOME, ORDERS, INBOX, CARDAPIO] },
     {
       labelKey: "moreTools",
       collapsible: true,

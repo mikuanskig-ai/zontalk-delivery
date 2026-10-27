@@ -97,7 +97,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   // module on (Settings → Modules) — everyone else's sidebar is
   // unaffected. See buildNavGroups for the delivery-first arrangement.
   const hasDelivery = hasModule(account, "delivery");
-  const navGroups = useMemo(() => buildNavGroups(hasDelivery), [hasDelivery]);
+  const hasSalao = hasModule(account, "salao");
+  const navGroups = useMemo(() => buildNavGroups(hasDelivery, hasSalao), [hasDelivery, hasSalao]);
   const moreItems = useMemo(
     () => navGroups.find((g) => g.collapsible)?.items ?? [],
     [navGroups],

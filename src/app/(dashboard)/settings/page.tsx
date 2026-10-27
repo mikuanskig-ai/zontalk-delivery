@@ -22,6 +22,7 @@ import { BusinessHoursConfig } from '@/components/settings/business-hours-config
 import { DeliveryFeeConfig } from '@/components/settings/delivery-fee-config';
 import { PublicMenuConfig } from '@/components/settings/public-menu-config';
 import { PrintConfig } from '@/components/settings/print-config';
+import { SalaoSettings } from '@/components/settings/salao-settings';
 import { OrderTagConfig } from '@/components/settings/order-tag-config';
 import { MetaCapiConfig } from '@/components/settings/meta-capi-config';
 import { MembersTab } from '@/components/settings/members-tab';
@@ -93,6 +94,7 @@ function SettingsPageInner() {
     'delivery-fee': <DeliveryFeeConfig />,
     'public-menu': <PublicMenuConfig />,
     printing: <PrintConfig />,
+    salao: <SalaoSettings />,
     'order-tag': <OrderTagConfig />,
     'meta-capi': <MetaCapiConfig />,
     members: <MembersTab />,

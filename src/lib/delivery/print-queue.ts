@@ -23,6 +23,7 @@
 // ============================================================
 
 import { supabaseAdmin } from '@/lib/payments/admin-client';
+import type { SalaoTicket } from '@/lib/salao/tickets';
 
 const RETRY_BACKOFF_SECONDS = 60;
 const MAX_ATTEMPTS = 3;
@@ -98,11 +99,63 @@ export async function notifyOrderCancellation(accountId: string, orderId: string
   }
 }
 
-/** Fire-and-forget — mirrors touchLastUsed (src/lib/api-keys/store.ts). */
-export function touchPrintAgentPoll(accountId: string): void {
+/**
+ * Enfileira um ticket do módulo Salão (rodada da mesa, cancelamento de
+ * item, pré-conta, fechamento do caixa). O conteúdo (`payload`) é
+ * congelado agora: diferente de um pedido de delivery, não há linha no
+ * banco para o agente reler depois.
+ *
+ * Só imprime se a conta ligou a impressão (print_configs.enabled), igual
+ * ao delivery. Nunca lança — falha de impressão não pode derrubar o
+ * lançamento do garçom nem o fechamento da comanda. Devolve se o job foi
+ * criado, para a tela poder dizer "enviado à cozinha" ou "impressão
+ * desligada".
+ */
+export async function enqueueSalaoPrint(
+  accountId: string,
+  kind: 'salao_round' | 'salao_item_cancel' | 'salao_bill' | 'cash_report',
+  target: 'cozinha' | 'caixa',
+  payload: SalaoTicket,
+): Promise<{ queued: boolean }> {
+  try {
+    const db = supabaseAdmin();
+    const { data: config } = await db
+      .from('print_configs')
+      .select('enabled')
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    if (!config?.enabled) return { queued: false };
+
+    const { error } = await db.from('print_jobs').insert({
+      account_id: accountId,
+      order_id: null,
+      kind,
+      target,
+      payload,
+    });
+    if (error) {
+      console.error('[print-queue] failed to enqueue salao print job:', error.message);
+      return { queued: false };
+    }
+    return { queued: true };
+  } catch (err) {
+    console.error('[print-queue] failed to enqueue salao print job:', err);
+    return { queued: false };
+  }
+}
+
+/** Fire-and-forget — mirrors touchLastUsed (src/lib/api-keys/store.ts).
+ *  `caixa: true` = o agente declarou ter impressora de caixa (módulo
+ *  Salão); o painel usa isso para avisar quando a pré-conta e o
+ *  fechamento do caixa estão sem quem imprima. */
+export function touchPrintAgentPoll(accountId: string, opts: { caixa?: boolean } = {}): void {
+  const now = new Date().toISOString();
+  const patch: Record<string, string> = { last_polled_at: now };
+  if (opts.caixa) patch.last_polled_caixa_at = now;
   void supabaseAdmin()
     .from('print_configs')
-    .update({ last_polled_at: new Date().toISOString() })
+    .update(patch)
     .eq('account_id', accountId)
     .then(({ error }) => {
       if (error) {

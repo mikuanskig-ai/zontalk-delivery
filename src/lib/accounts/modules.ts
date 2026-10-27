@@ -7,7 +7,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const MODULE_KEYS = ["delivery"] as const;
+export const MODULE_KEYS = ["delivery", "salao"] as const;
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 

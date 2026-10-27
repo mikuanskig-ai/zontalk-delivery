@@ -2,6 +2,7 @@ import {
   Blocks,
   Clock,
   Coins,
+  ConciergeBell,
   CreditCard,
   KeyRound,
   LayoutGrid,
@@ -45,6 +46,7 @@ export const SETTINGS_SECTIONS = [
   'delivery-fee',
   'public-menu',
   'printing',
+  'salao',
   'order-tag',
   'meta-capi',
   'members',
@@ -62,7 +64,7 @@ export interface SectionMeta {
   icon: LucideIcon;
   group: 'top' | 'account' | 'workspace';
   /** Only shown when the account has this module enabled (see hasModule). */
-  moduleGate?: 'delivery';
+  moduleGate?: 'delivery' | 'salao';
 }
 
 export const SECTION_META: Record<SettingsSection, SectionMeta> = {
@@ -110,6 +112,13 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
     icon: Printer,
     group: 'workspace',
     moduleGate: 'delivery',
+  },
+  salao: {
+    id: 'salao',
+    label: 'Dining room',
+    icon: ConciergeBell,
+    group: 'workspace',
+    moduleGate: 'salao',
   },
   'order-tag': {
     id: 'order-tag',

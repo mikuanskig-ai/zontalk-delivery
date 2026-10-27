@@ -35,7 +35,10 @@ function makeTable(rows: Record<string, unknown>[]) {
         return c;
       },
       in: (col: string, vals: unknown[]) => {
-        filtered = filtered.filter((r) => vals.includes(r[col]));
+        // Rows seeded before the Salão columns existed behave as the DB
+        // defaults would (kind 'delivery_order', target 'cozinha').
+        const dflt: Record<string, unknown> = { kind: 'delivery_order', target: 'cozinha' };
+        filtered = filtered.filter((r) => vals.includes(r[col] ?? dflt[col]));
         return c;
       },
       or: () => c,
@@ -89,10 +92,12 @@ function makeDb(seed: {
     // Fakes the claim_print_jobs RPC (migration 060): claims up to
     // p_limit oldest pending rows for the account, flipping them to
     // 'claimed' in place — mirrors the real atomic UPDATE...RETURNING.
-    rpc: (fn: string, args: { p_account_id: string; p_limit: number }) => {
+    rpc: (fn: string, args: { p_account_id: string; p_limit: number; p_kinds?: string[]; p_targets?: string[] }) => {
       if (fn !== 'claim_print_jobs') throw new Error(`unexpected rpc: ${fn}`);
       const claimed = tables.print_jobs
         .filter((r) => r.account_id === args.p_account_id && r.status === 'pending')
+        .filter((r) => (args.p_kinds ?? ['delivery_order']).includes((r.kind as string) ?? 'delivery_order'))
+        .filter((r) => (args.p_targets ?? ['cozinha']).includes((r.target as string) ?? 'cozinha'))
         .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
         .slice(0, args.p_limit);
       for (const row of claimed) row.status = 'claimed';
@@ -101,8 +106,8 @@ function makeDb(seed: {
   };
 }
 
-function request() {
-  return new Request('http://localhost/api/v1/print-jobs', { method: 'GET' });
+function request(query = '') {
+  return new Request(`http://localhost/api/v1/print-jobs${query}`, { method: 'GET' });
 }
 
 beforeEach(() => {
@@ -153,7 +158,7 @@ describe('GET /api/v1/print-jobs', () => {
     expect(body.data.jobs).toHaveLength(1);
     expect(body.data.jobs[0].receipt.customer_name).toBe('Maria');
     expect(body.data.jobs[0].receipt.items).toHaveLength(1);
-    expect(mocks.touchPrintAgentPoll).toHaveBeenCalledWith('acct-1');
+    expect(mocks.touchPrintAgentPoll).toHaveBeenCalledWith('acct-1', { caixa: false });
   });
 
   it('returns compact_print: true when the account opted into compact printing', async () => {
@@ -323,4 +328,82 @@ describe('GET /api/v1/print-jobs', () => {
     const totalServed = firstBody.data.jobs.length + secondBody.data.jobs.length;
     expect(totalServed).toBe(1);
   });
+
+  describe('módulo Salão (migration 089)', () => {
+    const salaoJob = (over: Record<string, unknown> = {}) => ({
+      id: 'job-salao', order_id: null, account_id: 'acct-1', status: 'pending', attempts: 0,
+      created_at: '2026-01-01T00:00:00Z', next_attempt_at: null,
+      kind: 'salao_round', target: 'cozinha',
+      payload: { type: 'salao_round', table_label: 'Mesa 12', round_number: 1, staff_name: 'Carlos', guests: 2, created_at: 'x', items: [] },
+      ...over,
+    });
+    // Fábrica: o fake do banco muda o status no lugar, então um objeto
+    // compartilhado vazaria o 'claimed' de um teste para o seguinte.
+    const makeDeliveryJob = () => ({
+      id: 'job-delivery', order_id: 'order-1', account_id: 'acct-1', status: 'pending', attempts: 0,
+      created_at: '2026-01-01T00:00:00Z', next_attempt_at: null,
+    });
+    const order = {
+      id: 'order-1', status: 'confirmed', source: 'ai_chat', customer_name: 'Maria',
+      delivery_address: null, notes: null, subtotal: 10, delivery_fee: null, total: 10,
+      currency: 'BRL', created_at: '2026-01-01T00:00:00Z', contact: null,
+    };
+
+    it('um agente antigo (sem parâmetros) NUNCA recebe ticket de salão', async () => {
+      const jobs = [salaoJob(), makeDeliveryJob()];
+      const db = makeDb({ accounts: [{ id: 'acct-1', name: 'X' }], print_jobs: jobs, delivery_orders: [order], delivery_order_items: [] });
+      mocks.requireApiKey.mockResolvedValue({ supabase: db, accountId: 'acct-1' });
+
+      const body = await (await GET(request())).json();
+      expect(body.data.jobs.map((j: { id: string }) => j.id)).toEqual(['job-delivery']);
+      // O ticket do salão continua intacto na fila, esperando um agente que saiba imprimi-lo.
+      expect(jobs[0].status).toBe('pending');
+      // ...e não conta no "pendentes" que esse agente enxerga.
+      expect(body.data.pending_count).toBe(0);
+    });
+
+    it('um agente 1.4.0 que mande printers também não recebe ticket de salão', async () => {
+      const jobs = [salaoJob()];
+      const db = makeDb({ accounts: [{ id: 'acct-1', name: 'X' }], print_jobs: jobs });
+      mocks.requireApiKey.mockResolvedValue({ supabase: db, accountId: 'acct-1' });
+
+      const body = await (await GET(request('?agent=1.4.0&printers=cozinha,caixa'))).json();
+      expect(body.data.jobs).toHaveLength(0);
+      expect(jobs[0].status).toBe('pending');
+    });
+
+    it('um agente 1.5.0 recebe o ticket de salão com o conteúdo congelado e sem receipt', async () => {
+      const db = makeDb({ accounts: [{ id: 'acct-1', name: 'X' }], print_jobs: [salaoJob()] });
+      mocks.requireApiKey.mockResolvedValue({ supabase: db, accountId: 'acct-1' });
+
+      const body = await (await GET(request('?agent=1.5.0&printers=cozinha'))).json();
+      expect(body.data.jobs).toHaveLength(1);
+      const job = body.data.jobs[0];
+      expect(job).toMatchObject({ id: 'job-salao', order_id: null, kind: 'salao_round', target: 'cozinha', receipt: null });
+      expect(job.ticket.table_label).toBe('Mesa 12');
+    });
+
+    it('o que é do caixa só vai para o agente que declarou impressora de caixa', async () => {
+      const bill = salaoJob({ id: 'job-bill', kind: 'salao_bill', target: 'caixa' });
+      const dbKitchenOnly = makeDb({ accounts: [{ id: 'acct-1', name: 'X' }], print_jobs: [bill] });
+      mocks.requireApiKey.mockResolvedValue({ supabase: dbKitchenOnly, accountId: 'acct-1' });
+      expect((await (await GET(request('?agent=1.5.0&printers=cozinha'))).json()).data.jobs).toHaveLength(0);
+
+      const bill2 = salaoJob({ id: 'job-bill', kind: 'salao_bill', target: 'caixa' });
+      const dbBoth = makeDb({ accounts: [{ id: 'acct-1', name: 'X' }], print_jobs: [bill2] });
+      mocks.requireApiKey.mockResolvedValue({ supabase: dbBoth, accountId: 'acct-1' });
+      const body = await (await GET(request('?agent=1.5.0&printers=cozinha,caixa'))).json();
+      expect(body.data.jobs.map((j: { id: string }) => j.id)).toEqual(['job-bill']);
+      expect(mocks.touchPrintAgentPoll).toHaveBeenLastCalledWith('acct-1', { caixa: true });
+    });
+
+    it('o job de delivery agora também informa kind/target (e ticket null)', async () => {
+      const db = makeDb({ accounts: [{ id: 'acct-1', name: 'X' }], print_jobs: [makeDeliveryJob()], delivery_orders: [order], delivery_order_items: [] });
+      mocks.requireApiKey.mockResolvedValue({ supabase: db, accountId: 'acct-1' });
+      const body = await (await GET(request('?agent=1.5.0&printers=cozinha'))).json();
+      expect(body.data.jobs[0]).toMatchObject({ kind: 'delivery_order', target: 'cozinha', ticket: null });
+      expect(body.data.jobs[0].receipt.customer_name).toBe('Maria');
+    });
+  });
 });
+

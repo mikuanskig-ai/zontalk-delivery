@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Blocks, Loader2, UtensilsCrossed } from "lucide-react";
+import { Blocks, Loader2, Store, UtensilsCrossed } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,6 +24,7 @@ import { SettingsPanelHead } from "./settings-panel-head";
 // other file in this component needs to change.
 const MODULE_META: Record<ModuleKey, { icon: typeof Blocks }> = {
   delivery: { icon: UtensilsCrossed },
+  salao: { icon: Store },
 };
 
 /**
